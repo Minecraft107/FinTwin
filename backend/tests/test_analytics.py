@@ -144,3 +144,8 @@ def test_top_merchants_falls_back_to_description():
     rows = agg.top_merchants(txns, date(2026, 8, 1), date(2026, 9, 30), limit=2)
     assert rows[0] == {"merchant": "x", "total": 67_000, "count": 4, "category": "Housing"}
     assert rows[1]["merchant"] == "Amazon" and rows[1]["total"] == 25_000
+
+
+def test_monthly_buckets_start_on_the_first():
+    assert agg.bucket_start(date(2025, 10, 9), "month") == date(2025, 10, 1)
+    assert agg.bucket_start(date(2025, 10, 9), "day") == date(2025, 10, 9)

@@ -16,9 +16,10 @@ from flask import current_app
 from pydantic import ValidationError
 
 from app.extensions import db
-from app.models import CoachConversation, CoachMessage, RiskAlert
-from app.models.enums import AlertStatus, MessageRole
+from app.models import CoachConversation, CoachMessage
+from app.models.enums import MessageRole
 from app.repositories.user_data import load_user_data
+from app.services.analytics.risk_service import active_alerts
 from app.services.coach import grounding, local
 from app.services.coach.context import CoachInputs, build_context
 from app.services.coach.entities import extract
@@ -62,27 +63,6 @@ SECTION_TITLES = [
     ("recommendations", "What you could do"),
     ("background", "Background"),
 ]
-
-
-def _active_alerts(user_id: int) -> list[dict]:
-    from app.services.analytics.anomalies import SEVERITY_RANK
-
-    rows = db.session.scalars(
-        db.select(RiskAlert).where(
-            RiskAlert.user_id == user_id, RiskAlert.status == AlertStatus.ACTIVE
-        )
-    )
-    rows = sorted(rows, key=lambda a: -SEVERITY_RANK[a.severity])
-    return [
-        {
-            "type": a.type,
-            "severity": a.severity.value,
-            "title": a.title,
-            "explanation": a.explanation,
-            "recommended_action": a.recommended_action,
-        }
-        for a in rows
-    ]
 
 
 COMPARE_MONTHS = (3, 6, 1, 12)
@@ -130,7 +110,7 @@ def gather(user_id: int, question: str):
         health=health,
         health_change=change,
         goal_plans=plan_goals(twin),
-        alerts=_active_alerts(user_id),
+        alerts=active_alerts(user_id),
     )
     if intent.name == "forecast":
         inputs.forecast = forecast_expenses(data, 3)

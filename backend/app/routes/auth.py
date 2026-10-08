@@ -1,4 +1,4 @@
-from flask import Blueprint
+from flask import Blueprint, current_app
 from flask_jwt_extended import create_access_token, jwt_required
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -42,6 +42,17 @@ def login():
         raise ApiError(401, "INVALID_CREDENTIALS", "Incorrect email or password.")
     if not user.check_password(body.password):
         raise ApiError(401, "INVALID_CREDENTIALS", "Incorrect email or password.")
+    return ok(_session(user))
+
+
+@bp.post("/demo")
+def demo_login():
+    """Log in as the seeded demo user without exposing its password to the browser."""
+    if not current_app.config["DEMO_LOGIN_ENABLED"]:
+        raise ApiError(404, "NOT_FOUND", "Demo login is disabled.")
+    user = db.session.scalar(db.select(User).where(User.email == current_app.config["DEMO_EMAIL"]))
+    if user is None:
+        raise ApiError(404, "NOT_FOUND", "Demo account not found. Run `flask seed` first.")
     return ok(_session(user))
 
 

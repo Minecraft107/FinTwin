@@ -286,3 +286,42 @@ Full description: [simulation.md](simulation.md).
   - Positive scenarios were described as merely "manageable".
   - The shell mangled long heredocs; files were written via the editor instead.
 - **Not verified:** real OpenAI or Gemini calls (no API key in this environment). Provider request and response handling is covered by mocked tests only.
+
+### Phase 11: React frontend ✅ (2026-10-09)
+- **Foundation:**
+  - `services/api.js`: JWT header, envelope unwrap, a global 401 → logout, readable validation errors.
+  - `context/AuthContext.jsx`, `hooks/useApi.js` (GET with reload), `utils/format.js` (₹ Indian grouping, compact ₹K/₹L/₹Cr, labels).
+  - `components/ui.jsx`: cards, buttons, fields, status badges with icon + label, stat tiles, meters, score gauge, modal, segmented control.
+  - `charts/charts.jsx` (Recharts), `layouts/AppShell.jsx` (sidebar plus mobile drawer), `ErrorBoundary`.
+- **Pages (12):**
+  - Landing; Login (+ "Explore the demo account") and Register.
+  - **Dashboard:** score, KPIs, income vs spending, alerts, goals, forecast, quick what-if.
+  - **Digital Twin:** a 4-step flow from current state, to health with its "how it's calculated" table and ranked improvements, to predicted state with projection, net-worth and score history, to scenario links.
+  - **Transactions:** filters, pagination, add/edit/delete with category-correction learning, and a CSV import wizard with per-row status, include toggles and category edits.
+  - **Analytics:** 7d/30d/3m/6m/12m/custom ranges, KPIs vs the previous period, essential/discretionary split, category bars, flows, cash trend, category changes, merchants.
+  - **Forecasts:** horizon selector, a forecast band chart, a category table, the model backtest table with the selection rule, and the cash projection.
+  - **Goals:** plans, the sensitivity table, a "try a change" panel, and CRUD with a return assumption.
+  - **Simulator:** 8 change editors, combinable, prefilled from URL query; results with risk, impact, timeline metric switcher, state comparison, goals and assumptions; save, re-run and delete scenarios.
+  - **Risks:** filter, dismiss/restore, re-scan.
+  - **Coach:** chat with labelled answer sections, sources, simulation chip, provider, suggested questions, conversation history.
+  - **Profile:** profile form, investments and loans CRUD, ML model status and metrics.
+- **Backend additions:**
+  - `GET /api/dashboard` (one twin build for the whole dashboard).
+  - `POST /api/auth/demo` (`DEMO_LOGIN_ENABLED`, off in production by default).
+  - Monthly trend buckets start on the 1st.
+  - The active-alerts query is shared between the coach and the dashboard.
+- **Verified in the browser** (backend on SQLite via a local `.env`, frontend dev server, demo data):
+  - Every page loads live data with no console errors after fixes.
+  - A simulation run prefilled from the URL works, and coach questions answer.
+  - Mobile at 375 px shows no horizontal overflow on the dashboard, transactions or simulator.
+  - The new-user journey works: register → validation error shown for a reserved email domain → registered → empty state → profile saved → twin rebuilt from declared values (score 72, B), with the emergency-fund alert.
+- **Not exercised in the browser:** the CSV file picker and the add/edit transaction modals. The endpoints behind them are covered by the API tests.
+- **Checks:** 461 backend tests pass (+3). oxlint has 0 errors and 2 accepted warnings (the data hook sets a loading flag in an effect; the auth file exports its hook). Build: main bundle 291 kB plus a lazy charts chunk of 410 kB (was a single 788 kB bundle).
+- **Problems found and fixed:**
+  - The Coach page crashed blank: a concise arrow effect returned `scrollIntoView()`'s Promise, which React then called as a clean-up function. An error boundary was added too.
+  - The 12-month income chart dipped to ₹0 in its first month, because a partial first month missed the salary.
+  - "+1768%" style percentages on near-zero bases (rupees are shown instead).
+  - Empty charts drew a meaningless ₹0–₹4 axis.
+  - Asset labels ("Ppf" → "PPF").
+  - The single 788 kB bundle (code-split).
+  - Setting state in effects in Profile and the Simulator (state is now initialised directly).

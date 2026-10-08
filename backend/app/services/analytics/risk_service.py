@@ -205,3 +205,23 @@ def sync_alerts(user_id: int, alerts: list[Alert]) -> None:
     for stale in existing.values():
         db.session.delete(stale)
     db.session.commit()
+
+
+def active_alerts(user_id: int) -> list[dict]:
+    """The user's active (not dismissed) alerts, most severe first."""
+    rows = db.session.scalars(
+        db.select(RiskAlert).where(
+            RiskAlert.user_id == user_id, RiskAlert.status == AlertStatus.ACTIVE
+        )
+    )
+    return [
+        {
+            "id": a.id,
+            "type": a.type,
+            "severity": a.severity.value,
+            "title": a.title,
+            "explanation": a.explanation,
+            "recommended_action": a.recommended_action,
+        }
+        for a in sorted(rows, key=lambda a: (-SEVERITY_RANK[a.severity], a.id))
+    ]

@@ -124,6 +124,12 @@ def granularity_for(start: date, end: date) -> str:
     return "day" if (end - start).days < DAILY_GRANULARITY_MAX_DAYS else "month"
 
 
+def bucket_start(start: date, granularity: str) -> date:
+    """Monthly charts start on the 1st: a partial first month (e.g. 10-31 Oct) would miss
+    that month's salary and plot a misleading dip."""
+    return start.replace(day=1) if granularity == "month" else start
+
+
 def trends(
     txns: pd.DataFrame, start: date, end: date, granularity: str, opening_cash: float
 ) -> list[dict]:

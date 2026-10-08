@@ -1,32 +1,62 @@
-import { useEffect, useState } from 'react'
-import { request } from './services/api'
+import { lazy, Suspense } from 'react'
+import { Navigate, Route, Routes, useLocation } from 'react-router'
+import { Loading } from './components/ui'
+import { useAuth } from './context/AuthContext'
+import AppShell from './layouts/AppShell'
+import { Login, Register } from './pages/Auth'
+import Landing from './pages/Landing'
 
-// Phase 2 placeholder: proves frontend → proxy → Flask → DB wiring. Replaced in Phase 11.
+// App pages load on demand, so the landing and login screens don't download the chart library.
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const DigitalTwin = lazy(() => import('./pages/DigitalTwin'))
+const Transactions = lazy(() => import('./pages/Transactions'))
+const Analytics = lazy(() => import('./pages/Analytics'))
+const Forecasts = lazy(() => import('./pages/Forecasts'))
+const Goals = lazy(() => import('./pages/Goals'))
+const Simulator = lazy(() => import('./pages/Simulator'))
+const Risks = lazy(() => import('./pages/Risks'))
+const Coach = lazy(() => import('./pages/Coach'))
+const Profile = lazy(() => import('./pages/Profile'))
+
+function RequireAuth({ children }) {
+  const { user, loading } = useAuth()
+  const location = useLocation()
+  if (loading) return <Loading label="Restoring your session…" />
+  if (!user) return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />
+  return children
+}
+
+function GuestOnly({ children }) {
+  const { user, loading } = useAuth()
+  if (loading) return <Loading />
+  return user ? <Navigate to="/dashboard" replace /> : children
+}
+
+const page = (Component) => (
+  <Suspense fallback={<Loading />}>
+    <Component />
+  </Suspense>
+)
+
 export default function App() {
-  const [health, setHealth] = useState(null)
-  const [error, setError] = useState(null)
-
-  useEffect(() => {
-    request('/health')
-      .then(({ data }) => setHealth(data))
-      .catch(setError)
-  }, [])
-
   return (
-    <main className="min-h-screen grid place-items-center bg-slate-50 text-slate-800">
-      <div className="text-center space-y-3">
-        <h1 className="text-4xl font-bold text-emerald-700">FinTwin</h1>
-        <p className="text-slate-500">Analyze. Predict. Simulate. Decide Better.</p>
-        <p className="text-sm">
-          {error && <span className="text-red-600">Backend: {error.message}</span>}
-          {!error && !health && 'Checking backend…'}
-          {health && (
-            <span className={health.database === 'up' ? 'text-emerald-700' : 'text-amber-600'}>
-              Backend {health.status} · database {health.database}
-            </span>
-          )}
-        </p>
-      </div>
-    </main>
+    <Routes>
+      <Route path="/" element={<Landing />} />
+      <Route path="/login" element={<GuestOnly><Login /></GuestOnly>} />
+      <Route path="/register" element={<GuestOnly><Register /></GuestOnly>} />
+      <Route element={<RequireAuth><AppShell /></RequireAuth>}>
+        <Route path="/dashboard" element={page(Dashboard)} />
+        <Route path="/twin" element={page(DigitalTwin)} />
+        <Route path="/transactions" element={page(Transactions)} />
+        <Route path="/analytics" element={page(Analytics)} />
+        <Route path="/forecasts" element={page(Forecasts)} />
+        <Route path="/goals" element={page(Goals)} />
+        <Route path="/simulator" element={page(Simulator)} />
+        <Route path="/risks" element={page(Risks)} />
+        <Route path="/coach" element={page(Coach)} />
+        <Route path="/profile" element={page(Profile)} />
+      </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   )
 }

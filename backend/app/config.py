@@ -40,6 +40,8 @@ class Config:
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
     GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
     DEMO_EMAIL = os.getenv("DEMO_EMAIL", "demo@fintwin.app")
+    # One-click "Try the demo" login (no password in the frontend). Off in production unless set.
+    DEMO_LOGIN_ENABLED = os.getenv("DEMO_LOGIN_ENABLED", "true").lower() == "true"
     DEMO_PASSWORD = os.getenv("DEMO_PASSWORD", "FinTwin@Demo2026")
 
 
@@ -54,6 +56,7 @@ class TestingConfig(Config):
 
 class ProductionConfig(Config):
     APP_ENV = "production"
+    DEMO_LOGIN_ENABLED = os.getenv("DEMO_LOGIN_ENABLED", "false").lower() == "true"
 
 
 CONFIGS: dict[str, type[Config]] = {

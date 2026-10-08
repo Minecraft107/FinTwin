@@ -187,3 +187,18 @@ def test_demo_twin_tells_the_intended_story(app, client):
     assert 0.05 < twin["debt_to_income"] < 0.2
     assert set(twin["investment_allocation"]) == {"sip_equity", "ppf", "gold"}
     assert len(api.get("/api/digital-twin/history").get_json()["data"]) >= 23
+
+
+def test_dashboard_aggregate(app, client):
+    seed_demo()
+    user = db.session.scalar(db.select(User))
+    res = client.post(
+        "/api/auth/login", json={"email": user.email, "password": app.config["DEMO_PASSWORD"]}
+    )
+    api = ApiClient(client, res.get_json()["data"]["access_token"])
+    data = api.get("/api/dashboard").get_json()["data"]
+    assert set(data) == {"twin", "health", "trends", "alerts", "goals", "forecast"}
+    assert data["health"]["score"] == api.get("/api/health-score").get_json()["data"]["score"]
+    assert len(data["trends"]) == 13
+    assert data["alerts"][0]["severity"] in ("HIGH", "CRITICAL")
+    assert data["forecast"]["status"] == "ok"

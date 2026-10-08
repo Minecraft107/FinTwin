@@ -419,6 +419,14 @@ The full request/response schemas go in `docs/api.md` (Phase 4).
 
 ## 13. Frontend
 
+> **Implemented-design note (Phase 11):**
+> - **Stack:** React 19 + React Router 8 + Recharts 3 + Tailwind 4 + lucide icons. Pages are lazy-loaded, so the chart library only downloads for app pages.
+> - **Data loading:** `GET /api/dashboard` aggregates the dashboard in one request.
+> - **Demo access:** `POST /api/auth/demo` gives one-click demo access without the password living in frontend code.
+> - **Charts:** follow a validated colour/marks spec. The categorical order is blue, orange, aqua (colour-blind check passed). Status colours always come with icon + label. There's never a dual axis, and every chart has tooltips.
+> - **Resilience:** an error boundary per page keeps the shell alive if one page fails.
+> - **Dark mode:** deferred, as listed under secondary scope.
+
 ```
 frontend/src/
 ├── services/api.js        fetch wrapper: base URL, JWT header, envelope unwrap, 401 → logout

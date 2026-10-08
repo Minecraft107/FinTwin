@@ -52,6 +52,7 @@ def trends():
     if granularity not in ("day", "month"):
         raise ApiError(400, "VALIDATION_ERROR", "'granularity' must be day or month.")
     data = load_user_data(current_user_id())
+    start = agg.bucket_start(start, granularity)
     opening = cash_balance(data, start - timedelta(days=1))
     rows = agg.trends(data.transactions, start, end, granularity, opening)
     return ok(rows, _meta(start, end, granularity=granularity))

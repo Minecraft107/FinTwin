@@ -104,3 +104,15 @@ def test_token_for_deleted_user_rejected(app, client):
     token = create_access_token(identity="999")
     res = client.get(ME, headers={"Authorization": f"Bearer {token}"})
     assert res.status_code == 401
+
+
+def test_demo_login(app, client):
+    from app.seed.demo import seed_demo
+
+    assert client.post("/api/auth/demo").status_code == 404  # not seeded yet
+    seed_demo()
+    res = client.post("/api/auth/demo")
+    assert res.status_code == 200
+    assert res.get_json()["data"]["user"]["email"] == app.config["DEMO_EMAIL"]
+    app.config["DEMO_LOGIN_ENABLED"] = False
+    assert client.post("/api/auth/demo").status_code == 404

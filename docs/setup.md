@@ -65,6 +65,10 @@ npm run dev
 ```
 The dev server proxies `/api/*` to `http://localhost:5000`, so no CORS setup is needed during development.
 
+Open `http://localhost:5173`, then use **Log in → Explore the demo account** (one click, no password needed; it requires `flask seed` and `DEMO_LOGIN_ENABLED=true`, the default outside production), or create your own account.
+
+Production build: `npm run build` produces `frontend/dist/` (served by nginx in Phase 14).
+
 ## 5. Quality checks
 | What | Command (run inside the folder) |
 |---|---|
