@@ -21,12 +21,14 @@ def create_app(config: type[Config] | None = None) -> Flask:
     jwt.init_app(app)
     cors.init_app(app, resources={r"/api/*": {"origins": app.config["FRONTEND_ORIGIN"]}})
 
-    register_error_handlers(app)
-
     from app import models  # noqa: F401  (registers every table on db.metadata)
     from app.cli import register_cli
-    from app.routes.system import bp as system_bp
+    from app.routes import auth, holdings, profile, system, transactions
+    from app.utils.auth import register_jwt_handlers
 
-    app.register_blueprint(system_bp, url_prefix="/api")
+    register_error_handlers(app)
+    register_jwt_handlers(app)
+    for module in (system, auth, profile, transactions, holdings):
+        app.register_blueprint(module.bp, url_prefix=f"/api{module.bp.url_prefix or ''}")
     register_cli(app)
     return app

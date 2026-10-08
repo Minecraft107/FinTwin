@@ -88,7 +88,7 @@ Each phase ends with: tests run → errors fixed → behaviour verified → docs
 | 2 | git init, backend skeleton (`create_app`, config, extensions, `/api/health`), Vite React skeleton, docker-compose (db), `.env.example`, pytest + lint setup | `pytest` passes; `/api/health` responds; `npm run build` succeeds; `docker compose up db` healthy |
 | 3 | SQLAlchemy models, Alembic migration, category seed, synthetic generator, `flask seed` | Migration applies on Postgres and SQLite; seed creates 24 months; constraint tests |
 | 4 | Auth, profile, transactions CRUD, CSV preview/import, investments, loans, categories, error envelope, `docs/api.md` | API tests incl. auth/ownership/validation/bad CSV rows |
-| 5 | Twin builder, analytics endpoints, snapshots + backfill, categorizer (rules + memory, ML stub → filled in Phase 7) | Unit tests on hand-built frames (income 100k − expenses 60k = 40k, zero income, negative flow…) |
+| 5 | Twin builder, analytics endpoints, snapshots + backfill, recalculation on data changes | Unit tests on hand-built frames (income 100k − expenses 60k = 40k, zero income, negative flow…) |
 | 6 | Health score service, history, change explanation, methodology | Component-curve tests, renormalisation, grade boundaries, explanation ordering |
 | 7 | Feature module, categorizer training, XGBoost + baselines + selector, Isolation Forest + rules, ML eval scripts, `docs/ml.md` | Forecast tests (short history, flat series, trend), anomaly tests (planted outlier detected), eval metrics files written |
 | 8 | Simulation engine, 8 change types, impact, risk level, scenarios save, `docs/simulation.md` | Hand-calculated scenario tests (EMI formula, ₹1.3L purchase, 20% income cut, shortfall → CRITICAL) |
@@ -127,3 +127,20 @@ Each phase ends with: tests run → errors fixed → behaviour verified → docs
   - The first demo data had dining creep hidden by noise and an unrealistically large cash pile; the persona was re-tuned.
   - A cp1252 encoding crash in a helper script emptied `docs/setup.md`; it was restored from git.
 - Open: run `flask db upgrade` against live PostgreSQL once Docker Desktop is running.
+
+### Phase 4: Core APIs ✅ (2026-10-08)
+- Auth: register (also creates a profile), login with a timing-equalised failure path and a generic error, `/auth/me`, and JWT errors in the standard envelope. `protect(bp)` guards whole blueprints.
+- Profile GET/PUT (partial). Categories list. Transactions CRUD with filters, search and pagination (max 200 per page), plus a category/type compatibility check.
+- Categorizer stages 1–2 pulled forward from Phase 5, because CSV import needs them: user memory (learned from manual corrections) → ordered keyword rules → `Other` / `Other Income`. The ML stage comes in Phase 7.
+- CSV import: a stateless preview (column aliases, bank debit/credit format, Indian date and amount formats, per-row errors and warnings, duplicates within the file and against existing data), then an all-or-nothing commit that re-validates every row. Sample file: `database/seed/sample_bank_statement.csv`.
+- Investments, loans and goals CRUD through one helper. Loans get a default EMI (formula) and outstanding (= principal), and the outstanding ≤ principal rule is checked on the merged state.
+- Error handling: 409 for integrity errors, and every error path rolls back the session.
+- `docs/api.md` written.
+- Tests: 154 pass, 99% coverage. They cover auth (validation, duplicates, wrong credentials, missing/garbage/expired token, deleted user), profile isolation, the transaction lifecycle, filters, pagination limits, memory learning, cross-user 404s, 16 categorizer rule cases plus full synthetic coverage, CSV parsing of every bad-row type, bank format, duplicates, the size limit, and holdings CRUD, defaults and privacy.
+- Live smoke test (`flask run` + curl on the seeded DB): demo login → 1,160 transactions listed → sample statement previewed (14 ok, 1 duplicate, 2 errors with line numbers) → 14 committed → total 1,174.
+- Problems found and fixed:
+  - **Real bug:** `before_request(lambda: verify_jwt_in_request())` returned the decoded token as the HTTP response for every protected route.
+  - A failed update left dirty ORM state that the next query autoflushed; error handlers now roll back.
+  - Duplicate detection stripped digits, so different UPI references collided; it now uses a separate key that keeps digits.
+  - Pydantic `date: date` shadowing, and optional fields that were required by mistake.
+  - Heredoc escaping broke one test file; it was repaired.

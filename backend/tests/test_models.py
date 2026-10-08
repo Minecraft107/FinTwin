@@ -171,6 +171,7 @@ def test_deleting_user_cascades_to_owned_rows(user):
 
 
 def test_ensure_categories_is_idempotent(app):
+    db.session.execute(text("DELETE FROM expense_categories"))
     assert ensure_categories() == len(CATEGORIES)
     assert ensure_categories() == 0
     assert db.session.scalar(db.select(db.func.count(ExpenseCategory.id))) == len(CATEGORIES)

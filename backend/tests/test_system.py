@@ -1,4 +1,4 @@
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import IntegrityError, OperationalError
 
 from app.extensions import db
 
@@ -51,3 +51,27 @@ def test_cors_allows_frontend_origin(client):
 def test_cors_rejects_other_origin(client):
     res = client.get("/api/health", headers={"Origin": "http://evil.example"})
     assert "Access-Control-Allow-Origin" not in res.headers
+
+
+def test_integrity_error_returns_409(app, client):
+    @app.get("/api/_conflict")
+    def conflict():
+        raise IntegrityError("INSERT", {}, Exception("unique violation"))
+
+    res = client.get("/api/_conflict")
+    assert res.status_code == 409
+    assert res.get_json()["error"]["code"] == "CONFLICT"
+
+
+def test_unexpected_exception_returns_500_envelope(app, client):
+    @app.get("/api/_crash")
+    def crash():
+        raise RuntimeError("boom")
+
+    res = client.get("/api/_crash")
+    assert res.status_code == 500
+    assert res.get_json()["error"] == {
+        "code": "INTERNAL_ERROR",
+        "message": "An unexpected error occurred.",
+        "details": {},
+    }
