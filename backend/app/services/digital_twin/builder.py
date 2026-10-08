@@ -141,13 +141,21 @@ def build_twin(
 
     expenses = essential + discretionary
     by_category: dict[str, float] = {}
+    discretionary_by_category: dict[str, float] = {}
     if n:
         window_txns = txns[
             (txns["type"] == "expense") & (txns["date"].dt.to_period("M").isin(window_periods))
         ]
-        by_category = (
-            (window_txns.groupby("category")["amount"].sum() / n).sort_values(ascending=False)
-        ).to_dict()
+        averages_by = (window_txns.groupby("category")["amount"].sum() / n).sort_values(
+            ascending=False
+        )
+        by_category = averages_by.to_dict()
+        discretionary_names = set(
+            window_txns.loc[window_txns["kind"] == "discretionary", "category"]
+        )
+        discretionary_by_category = {
+            c: v for c, v in by_category.items() if c in discretionary_names
+        }
 
     # ---------------- balances ----------------
     investments_value = sum(value for _, value in holdings)
@@ -194,6 +202,7 @@ def build_twin(
         debt_payments=debt_payments,
         investment_contributions=invest,
         expenses_by_category=by_category,
+        discretionary_by_category=discretionary_by_category,
         net_cash_flow=income - expenses - debt_payments - invest,
         disposable_income=income - essential - debt_payments,
         burn_rate_daily=(expenses + debt_payments) / DAYS_PER_MONTH,

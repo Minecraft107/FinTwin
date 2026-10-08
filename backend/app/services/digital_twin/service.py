@@ -6,11 +6,18 @@ from datetime import date
 from flask import Blueprint, request
 
 from app.extensions import db
-from app.models import FinancialSnapshot
+from app.models import FinancialHealthScore, FinancialSnapshot
 from app.models.enums import SnapshotPeriod
 from app.repositories.user_data import load_user_data
 from app.services.digital_twin.builder import build_twin, monthly_snapshot_dates
 from app.services.digital_twin.state import TwinState, UserData
+from app.services.financial.health_score import (
+    SPECS,
+    HealthScoreResult,
+    explain_change,
+    score_twin,
+)
+from app.utils.dates import add_months, month_end
 
 logger = logging.getLogger(__name__)
 
@@ -39,12 +46,30 @@ def _snapshot_values(twin: TwinState) -> dict:
     }
 
 
+def _sync_score(snapshot: FinancialSnapshot, result: HealthScoreResult) -> None:
+    """Keep the snapshot's 1:1 health-score row in step (none when there is no score)."""
+    row = snapshot.health_score
+    if result.score is None:
+        if row is not None:
+            db.session.delete(row)
+        return
+    values = {"score": round(result.score, 2), "grade": result.grade}
+    values |= {key: result.component(key).score for key in SPECS}
+    if row is None:
+        snapshot.health_score = FinancialHealthScore(**values)
+    else:
+        for name, value in values.items():
+            setattr(row, name, value)
+
+
 def refresh_snapshots(user_id: int, data: UserData | None = None) -> int:
-    """Recompute every monthly snapshot plus today's on-change snapshot.
+    """Recompute every monthly snapshot (and its health score) plus today's on-change one.
 
     Monthly snapshots are rebuilt (not appended) because an import or edit can change any
     past month. Snapshots for months that no longer have data are removed.
     """
+    # ponytail: rebuilds every month on each write (~0.4 s per request for 24 months); rebuild
+    # only from the earliest changed month onward if write latency or history length grows.
     data = data or load_user_data(user_id)
     existing = {
         (s.as_of, s.period): s
@@ -56,13 +81,16 @@ def refresh_snapshots(user_id: int, data: UserData | None = None) -> int:
     wanted.append((data.today, SnapshotPeriod.ON_CHANGE))
 
     for as_of, period in wanted:
-        values = _snapshot_values(build_twin(data, as_of))
+        twin = build_twin(data, as_of)
+        values = _snapshot_values(twin)
         snapshot = existing.pop((as_of, period), None)
         if snapshot is None:
-            db.session.add(FinancialSnapshot(user_id=user_id, as_of=as_of, period=period, **values))
+            snapshot = FinancialSnapshot(user_id=user_id, as_of=as_of, period=period, **values)
+            db.session.add(snapshot)
         else:
             for name, value in values.items():
                 setattr(snapshot, name, value)
+        _sync_score(snapshot, score_twin(twin))
     for (_, period), stale in existing.items():
         if period == SnapshotPeriod.MONTHLY:
             db.session.delete(stale)
@@ -105,3 +133,19 @@ def recalculate_after_writes(bp: Blueprint, skip: tuple[str, ...] = ()) -> Bluep
         return response
 
     return bp
+
+
+def health_report(user_id: int, compare_months: int = 1) -> dict:
+    """Current score plus an explanation of the change versus `compare_months` earlier
+    (the twin rebuilt as of that many month-ends before the current averaging window)."""
+    data = load_user_data(user_id)
+    twin = build_twin(data)
+    current = score_twin(twin)
+    report = current.to_dict()
+    report["change"] = None
+    if twin.window_end:
+        previous_as_of = month_end(add_months(twin.window_end.replace(day=1), -compare_months))
+        previous_twin = build_twin(data, previous_as_of)
+        if previous_twin.window_months:
+            report["change"] = explain_change(current, score_twin(previous_twin))
+    return report

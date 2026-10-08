@@ -173,13 +173,13 @@ Each component maps one measurable indicator to a 0–100 sub-score through a **
 | Debt | 20 | debt-to-income (EMI / income) | 0%→100 · 20%→80 · 36%→50 · 50%→20 · ≥60%→0 | 36% common lending ceiling |
 | Cash-flow stability | 15 | % of last 6 months with positive net flow (70%) + expense CV (30%) | positive share × 70 + (1 − min(CV/0.5, 1)) × 30 | — |
 | Investments | 10 | investment contribution rate (70%) + asset-type diversification (30%) | 0%→0 · 10%→70 · ≥15%→100; 1 type→30 · 2→70 · ≥3→100 | — |
-| Goals | 10 | priority-weighted mean of min(1, projected/required contribution) | linear ×100 | — |
-| Spending behaviour | 5 | discretionary / income (70%) + recent high-severity anomalies (30%) | ≤30%→100 · 50%→50 · ≥70%→0; −35 per HIGH/CRITICAL anomaly (last 30d) | 50/30/20 rule (30% wants) |
+| Goals | 10 | priority-weighted (weight = 6 − priority) mean of min(1, *fundable* ÷ required monthly saving). "Fundable" means the monthly surplus is allocated to goals in priority order, capped at each goal's planned contribution | linear ×100 | Goals are funded from surplus, not as an extra outflow |
+| Spending behaviour | 5 | discretionary / income; once anomaly detection (Phase 7) supplies it: 70% of that + 30% recent high-severity anomalies | ≤30%→100 · 50%→50 · ≥70%→0; −35 per HIGH/CRITICAL anomaly (last 30d) | 50/30/20 rule (30% wants) |
 
 * **Missing data is not penalised arbitrarily.** If a component can't be computed (for example, the user has no goals), it is dropped and the remaining weights are renormalised. The response lists it under `excluded_components`.
 * **Grade:** A ≥ 85 Excellent · B 70–84 Good · C 55–69 Fair · D 40–54 Weak · E < 40 Critical.
 * **Explainability:** strengths are sub-scores ≥ 80 and weaknesses are ≤ 50. Each comes with a templated sentence that uses the real indicator ("Your emergency fund covers 2.1 months of essential expenses; 3–6 is recommended").
-* **Score change explanation:** each component's contribution delta, `weight × Δsub-score`, is computed against the previous monthly snapshot and sorted. The output reads like "Score fell 6 points, mainly because discretionary spending rose 18% (−4.1) and emergency coverage fell to 2.1 months (−1.5)".
+* **Score change explanation:** each component's contribution delta (`points = effective_weight × sub-score`) is computed against the twin rebuilt N month-ends earlier (`compare_months`, default 1) and sorted. The text names the top two drivers moving in the same direction as the score. Note that a one-month comparison can be dominated by a one-off month leaving the 3-month window. The output reads like "Score fell 6 points, mainly because discretionary spending rose 18% (−4.1) and emergency coverage fell to 2.1 months (−1.5)".
 * All anchors and weights live in one constants module. The frontend fetches them, so the "How is this calculated?" panel can never drift from the code.
 
 ---

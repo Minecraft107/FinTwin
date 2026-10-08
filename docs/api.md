@@ -197,4 +197,40 @@ Every endpoint takes a date range: `range=7d|30d|3m|6m|12m` (default `3m`, endin
 | `GET /analytics/trends[&granularity=day\|month]` | One row per day or month (auto: daily under 62 days): `period, income, expenses, essential, discretionary, debt_payments, investments, net_cash_flow, savings_ratio, cash_balance`. `cash_balance` is the running balance, i.e. the savings trend |
 | `GET /analytics/merchants[&limit=1..50]` | Top merchants by spend (falls back to description): `merchant, total, count, category` |
 
-The health score, forecast, risk, simulation and coach endpoints are documented as their phases land.
+## Financial Health Score
+### `GET /health-score[?compare_months=1..12]`
+```json
+{ "as_of": "2026-10-08", "score": 64.9, "grade": "C", "label": "Fair",
+  "components": [
+    { "key": "emergency_fund", "label": "Emergency fund", "weight": 20, "score": 39.7, "status": "weak",
+      "effective_weight": 0.2, "points": 7.94, "indicator": "Emergency-fund coverage",
+      "value": 1.4849, "value_display": "1.5 months", "target": "3–6 months",
+      "basis": "A common guideline is an emergency fund covering 3–6 months of essential costs.",
+      "explanation": "Your emergency fund of ₹95,000 covers 1.5 months of essential expenses and EMIs (₹63,977/month); 3–6 months is recommended.",
+      "excluded_reason": null } ],
+  "excluded_components": [],
+  "strengths": ["Debt burden: EMIs take 10.6% of your income (₹11,116/month)."],
+  "weaknesses": ["Emergency fund: ...", "Goal progress: ..."],
+  "recommendations": [
+    { "component": "emergency_fund", "title": "Strengthen your emergency fund", "potential_points": 12.1,
+      "action": "Reaching 3 months of cover needs ₹96,931 more — about ₹8,078/month over a year. Your account balance is ₹2,26,800; earmarking ₹96,931 of it as emergency savings would close the gap immediately." } ],
+  "notes": [],
+  "change": { "previous_as_of": "2026-03-31", "previous_score": 68.4, "delta": -3.5,
+              "summary": "Your score fell by 4 points since 2026-03-31 (68 → 65), mainly because ...",
+              "drivers": [{"component": "goals", "label": "Goal progress", "points_change": -3.8, "from": "50%", "to": "13%"}] } }
+```
+- `points` = `effective_weight × score`, and the points add up to `score`.
+- `status`: `strong` (≥ 80), `fair`, `weak` (≤ 50), or `excluded`.
+- Recommendations are ordered by `potential_points`, the score points available if that component reached 100.
+- `change` compares with the twin rebuilt `compare_months` month-ends earlier (default 1). Each component's movement is attributed in score points.
+- `score` is `null` (grade `N/A`) when nothing can be measured yet.
+
+### `GET /health-score/history`
+`[{"as_of", "score", "grade", "components": {"savings": 70.5, ...}}]`, one row per month-end, stored alongside the twin snapshots.
+
+### `GET /health-score/methodology`
+Weights, indicators, formulas, guideline anchors, grade bands and the missing-data rule, all generated from the same constants the scorer uses.
+
+`GET /digital-twin` also includes a `health_score` summary: `{score, grade, label, components}`.
+
+The forecast, risk, simulation and coach endpoints are documented as their phases land.

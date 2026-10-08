@@ -3,6 +3,7 @@ from datetime import date
 from flask import Blueprint, request
 
 from app.services.digital_twin.service import current_twin, monthly_history
+from app.services.financial.health_score import score_twin
 from app.utils.auth import current_user_id, protect
 from app.utils.http import ApiError, ok
 
@@ -18,7 +19,18 @@ def get_twin():
         raise ApiError(400, "VALIDATION_ERROR", "'as_of' must be YYYY-MM-DD.") from None
     if as_of and as_of > date.today():
         raise ApiError(400, "VALIDATION_ERROR", "'as_of' cannot be in the future.")
-    return ok(current_twin(current_user_id(), as_of).to_dict())
+    twin = current_twin(current_user_id(), as_of)
+    health = score_twin(twin)
+    payload = twin.to_dict()
+    payload["health_score"] = {
+        "score": None if health.score is None else round(health.score, 1),
+        "grade": health.grade,
+        "label": health.label,
+        "components": {
+            c.key: None if c.score is None else round(c.score, 1) for c in health.components
+        },
+    }
+    return ok(payload)
 
 
 @bp.get("/history")

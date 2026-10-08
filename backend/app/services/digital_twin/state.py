@@ -123,7 +123,8 @@ class TwinState:
     discretionary_expenses: float
     debt_payments: float  # EMIs
     investment_contributions: float  # SIPs etc.
-    expenses_by_category: dict[str, float]
+    expenses_by_category: dict[str, float]  # monthly average per expense category
+    discretionary_by_category: dict[str, float]  # subset of the above, largest first
     net_cash_flow: float  # income - expenses - debt - investments
     disposable_income: float  # income - essential - debt
     burn_rate_daily: float  # (expenses + debt) per day

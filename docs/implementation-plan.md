@@ -161,3 +161,22 @@ Each phase ends with: tests run → errors fixed → behaviour verified → docs
   - A vacuous test assertion (`or True`).
   - Two of my tests depended on today's date.
   - Percentage change against a negative baseline flipped sign; it now uses `/|previous|` and also returns absolute changes.
+
+### Phase 6: Financial Health Score ✅ (2026-10-08)
+- `services/financial/health_score.py` (pure):
+  - Seven components with guideline-anchored piecewise-linear curves. Weights total 100.
+  - Unmeasurable components are excluded and the weights renormalised.
+  - A grade, strengths and weaknesses with real numbers, and recommendations ranked by potential points. These are educational, never product advice.
+  - `explain_change` attributes the score movement per component.
+  - `methodology()` is generated from the same constants the scorer uses.
+- `services/financial/goals.py`: `allocate_surplus` funds goals from the monthly surplus by priority. Phase 9 extends it.
+- `utils/money.py`: Indian ₹ grouping.
+- The twin now also exposes `discretionary_by_category`.
+- Persistence: every snapshot refresh also upserts its 1:1 `financial_health_scores` row, with the total and all seven component scores.
+- Endpoints: `GET /health-score[?compare_months]`, `/health-score/history`, `/health-score/methodology`. `GET /digital-twin` embeds a score summary.
+- Tests: 263 pass. They check the curve anchors at the guideline values, grade boundaries, a hand-computed weighted total (6450/90), renormalisation, zero income, no data, the emergency gap and idle cash, high debt, goal priority funding (100·5/9), the anomaly penalty, cash-flow minimum history, recommendation ordering, explain-change attribution (drivers sum to the delta), ₹ formatting, and the API (demo score, history, validation, new user, declared-data score, twin embed).
+- Demo result: **64.9 (C, Fair)**, against a hand estimate of 64.8. Strengths: debt and spending. Weaknesses: emergency fund (1.5 months) and goals (₹50k/month needed vs ₹7.7k surplus). Against 6 months earlier: 68 → 65, driven by goal affordability and the savings ratio (23.7% → 16.8%).
+- Observations:
+  - A one-month comparison can rise when a bad month (June) leaves the 3-month window. That's correct, but it's why `compare_months` exists.
+  - Writes now take ~0.4 s because all months are rebuilt; marked with a `ponytail:` note.
+- Deferred to Phase 7: the anomaly input to the spending component. `score_twin(recent_high_alerts=...)` already accepts it.
