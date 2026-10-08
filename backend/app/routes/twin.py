@@ -1,0 +1,46 @@
+from datetime import date
+
+from flask import Blueprint, request
+
+from app.services.digital_twin.service import current_twin, monthly_history
+from app.utils.auth import current_user_id, protect
+from app.utils.http import ApiError, ok
+
+bp = protect(Blueprint("twin", __name__, url_prefix="/digital-twin"))
+
+
+@bp.get("")
+def get_twin():
+    raw = request.args.get("as_of")
+    try:
+        as_of = date.fromisoformat(raw) if raw else None
+    except ValueError:
+        raise ApiError(400, "VALIDATION_ERROR", "'as_of' must be YYYY-MM-DD.") from None
+    if as_of and as_of > date.today():
+        raise ApiError(400, "VALIDATION_ERROR", "'as_of' cannot be in the future.")
+    return ok(current_twin(current_user_id(), as_of).to_dict())
+
+
+@bp.get("/history")
+def history():
+    rows = monthly_history(current_user_id())
+    return ok(
+        [
+            {
+                "as_of": s.as_of.isoformat(),
+                "income": float(s.income),
+                "expenses": float(s.expenses),
+                "net_cash_flow": float(s.net_cash_flow),
+                "savings_ratio": s.savings_ratio,
+                "expense_ratio": s.expense_ratio,
+                "debt_to_income": s.debt_to_income,
+                "emergency_months": s.emergency_months,
+                "cash_balance": float(s.cash_balance),
+                "investments_value": float(s.investments_value),
+                "total_debt": float(s.total_debt),
+                "net_worth": float(s.net_worth),
+                "months_of_history": s.months_of_history,
+            }
+            for s in rows
+        ]
+    )

@@ -134,4 +134,67 @@ All three share the same shape: `GET /x` (list), `POST /x` (201), `PUT /x/:id` (
 | `/loans` | `name`, `loan_type` (`home, car, personal, education, credit_card, other`), `principal` > 0, `outstanding` (default = principal, ≤ principal), `annual_interest_rate` (fraction), `emi` (default computed: P·r(1+r)ⁿ/((1+r)ⁿ−1)), `tenure_months`, `start_date` |
 | `/goals` | `name`, `target_amount` > 0, `current_amount`, `target_date` (nullable; send `null` to clear), `priority` 1–5 (1 = highest), `monthly_contribution`, `status` (`active, achieved, paused`) |
 
-The analytics, twin, health score, forecast, risk, simulation and coach endpoints are documented as their phases land.
+## Digital Twin
+### `GET /digital-twin[?as_of=YYYY-MM-DD]`
+The derived financial state, computed fresh from all of your data. `as_of` (not in the future) rebuilds the twin as it stood on that date.
+```json
+{ "as_of": "2026-10-08", "window_months": 3, "window_start": "2026-07-01", "window_end": "2026-09-30",
+  "months_of_history": 23,
+  "monthly_income": 105211.67, "monthly_expenses": 76376.36, "essential_expenses": 52861.39,
+  "discretionary_expenses": 23514.96, "debt_payments": 11115.5, "investment_contributions": 10000.0,
+  "expenses_by_category": {"Housing": 26000.0, "Food & Dining": 11752.67, "...": 0},
+  "net_cash_flow": 7719.81, "disposable_income": 41234.77, "burn_rate_daily": 2874.3,
+  "cash_balance": 226800.01, "emergency_fund": 95000.0, "investments_value": 547078.69,
+  "investment_allocation": {"sip_equity": 0.6041, "ppf": 0.3078, "gold": 0.0881},
+  "total_debt": 392540.65, "goals_saved": 360000.0, "net_worth": 836338.05,
+  "savings_ratio": 0.1684, "expense_ratio": 0.7259, "debt_to_income": 0.1056,
+  "emergency_months": 1.4849, "investment_rate": 0.095,
+  "recent_months": [{"month": "2026-09", "income": 103335.0, "essential": 55368.0, "discretionary": 26515.0,
+                     "debt": 11115.5, "investment": 10000.0, "expenses": 81883.0, "net": 336.5}],
+  "goals": [{"id": 1, "name": "Buy a car", "target_amount": 800000.0, "current_amount": 200000.0,
+             "progress_pct": 25.0, "remaining": 600000.0, "monthly_contribution": 15000.0,
+             "target_date": "2028-10-08", "priority": 1, "status": "active"}],
+  "sources": {"income": "observed", "essential": "observed", "discretionary": "observed",
+              "debt_payments": "observed", "investment_contributions": "observed"},
+  "notes": [] }
+```
+**Definitions** (all flows are monthly averages over the last `window_months` *complete* months):
+
+| Field | Formula |
+|---|---|
+| `monthly_expenses` | essential + discretionary consumption (EMIs and investments are tracked separately) |
+| `net_cash_flow` | income − expenses − debt_payments − investment_contributions |
+| `disposable_income` | income − essential − debt_payments |
+| `savings_ratio` | (income − expenses − debt_payments) / income; money invested counts as saved |
+| `expense_ratio` | expenses / income |
+| `debt_to_income` | debt_payments / income |
+| `emergency_months` | emergency_fund / (essential + debt_payments); EMIs must be paid in an emergency too |
+| `investment_rate` | investment_contributions / income |
+| `cash_balance` | opening balance (at the start of the opening date) ± every transaction since |
+| `net_worth` | cash + emergency fund + investments + goal savings − loan outstanding |
+
+Ratios are `null` when their denominator is 0 (e.g. zero income).
+
+`sources` shows where each value came from:
+- `observed`: averaged from your transactions.
+- `declared`: your profile values, used when there is no complete month of history yet.
+- `holdings`: scheduled EMIs or SIPs from your loans and investments, used when no matching transactions exist.
+
+`notes` explains any fallback.
+
+### `GET /digital-twin/history`
+Month-end snapshots for every complete month with history, oldest first: `as_of, income, expenses, net_cash_flow, savings_ratio, expense_ratio, debt_to_income, emergency_months, cash_balance, investments_value, total_debt, net_worth, months_of_history`.
+
+Snapshots are rebuilt automatically after every successful write: transactions, import, profile, investments, loans, goals. An import can change past months, so all of them are recomputed rather than appended. Loan balances and investment values for past months are worked back from today's stored values. The emergency fund and goal balances use today's values, since no history of them is kept.
+
+## Analytics
+Every endpoint takes a date range: `range=7d|30d|3m|6m|12m` (default `3m`, ending today), or a custom `from=YYYY-MM-DD&to=YYYY-MM-DD` (maximum 5 years). The resolved range is echoed in `meta.from` / `meta.to`.
+
+| Endpoint | Returns |
+|---|---|
+| `GET /analytics/overview` | `current` and `previous` (the equal-length period immediately before), each with `income, expenses, essential, discretionary, debt_payments, investments, net_cash_flow, savings_ratio, avg_daily_spend, transaction_count`. Also `change.{metric}: {abs, pct}` (pct is relative to \|previous\|, and null when previous is 0) and `essential_share` / `discretionary_share` |
+| `GET /analytics/categories` | Expense outflows per category: `category, kind, total, count, share, previous_total, change_pct`, largest first |
+| `GET /analytics/trends[&granularity=day\|month]` | One row per day or month (auto: daily under 62 days): `period, income, expenses, essential, discretionary, debt_payments, investments, net_cash_flow, savings_ratio, cash_balance`. `cash_balance` is the running balance, i.e. the savings trend |
+| `GET /analytics/merchants[&limit=1..50]` | Top merchants by spend (falls back to description): `merchant, total, count, category` |
+
+The health score, forecast, risk, simulation and coach endpoints are documented as their phases land.

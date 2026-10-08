@@ -143,7 +143,7 @@ class TwinState:
     savings_ratio: float              # (income − all outflows except investments) / income
     expense_ratio: float
     debt_to_income: float             # debt_payments / income
-    emergency_months: float           # emergency_fund / essential_expenses
+    emergency_months: float           # emergency_fund / (essential + debt_payments)
     investment_rate: float
     # Derived blocks
     goals: list[GoalProgress]
@@ -152,9 +152,9 @@ class TwinState:
     data_quality: DataQuality         # per-field source: 'observed' | 'declared', confidence notes
 ```
 
-**Observed vs declared:** a user can declare a monthly income in their profile and also import transactions. The twin prefers **observed** values (trailing 3-month transaction averages) when at least one full month of data exists. Otherwise it falls back to the **declared** profile value, and `data_quality` records which source was used. The UI shows that source, so the user knows whether a number is measured or self-reported.
+**Observed vs declared:** a user can declare a monthly income in their profile and also import transactions. The twin prefers **observed** values (trailing 3-month transaction averages) when at least one full month of data exists. Otherwise it falls back to the **declared** profile value, and `sources` records which source was used (`observed` / `declared` / `holdings`). Only *complete* calendar months are averaged; the current partial month is excluded, because it would understate spending. The UI shows that source, so the user knows whether a number is measured or self-reported.
 
-**Recalculation:** building the twin from roughly 1,000 transactions takes milliseconds, so `GET /api/digital-twin` always computes it fresh. Every write (transactions, CSV import, profile, investments, loans, goals) also stores an `on_change` snapshot plus a health score. Monthly snapshots are back-filled from history: the twin is rebuilt *as of* the end of each past month. That powers the score-history chart and "why did my score change?" explanations.
+**Recalculation:** building the twin from roughly 1,000 transactions takes milliseconds, so `GET /api/digital-twin` always computes it fresh. After every successful write (transactions, CSV import, profile, investments, loans, goals), an `after_request` hook rebuilds the `on_change` snapshot for today *and every monthly snapshot*. A CSV import can change any past month, so the history is recomputed rather than appended; for 24 months this takes about 0.12 s. Past snapshots rebuild the twin *as of* each month-end. Loan balances and investment values are worked back from today's stored values with the amortisation and compounding formulas; the emergency fund and goal balances use today's values. If recalculation fails, the error is logged and the user's write still succeeds. That powers the score-history chart and "why did my score change?" explanations.
 
 **Pipeline:** `repositories.load_user_frame(user_id)` → `digital_twin.builder.build(frame, as_of)` → `TwinState`. The builder is pure, and the tests feed it hand-built DataFrames.
 

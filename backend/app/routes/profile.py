@@ -4,10 +4,13 @@ from app.extensions import db
 from app.models import FinancialProfile
 from app.schemas.common import dump, parse_body
 from app.schemas.profile import ProfileOut, ProfileUpdate
+from app.services.digital_twin.service import recalculate_after_writes
 from app.utils.auth import current_user_id, protect
 from app.utils.http import ok
 
-bp = protect(Blueprint("profile", __name__, url_prefix="/financial-profile"))
+bp = recalculate_after_writes(
+    protect(Blueprint("profile", __name__, url_prefix="/financial-profile"))
+)
 
 
 def _profile(user_id: int) -> FinancialProfile:

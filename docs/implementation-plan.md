@@ -144,3 +144,20 @@ Each phase ends with: tests run → errors fixed → behaviour verified → docs
   - Duplicate detection stripped digits, so different UPI references collided; it now uses a separate key that keeps digits.
   - Pydantic `date: date` shadowing, and optional fields that were required by mistake.
   - Heredoc escaping broke one test file; it was repaired.
+
+### Phase 5: Digital Twin & analytics ✅ (2026-10-08)
+- `services/digital_twin/`:
+  - `state.py`: input and output dataclasses.
+  - `builder.py`: a pure `build_twin(UserData, as_of)` covering flows, balances, ratios, allocation, goal progress, recent months, sources and notes.
+  - `service.py`: snapshot refresh plus the `recalculate_after_writes` hook.
+- Rules: averages use the last three **complete** months. Values come from observed transactions, then declared profile values, then scheduled holdings. Ratios are `None` when undefined. The emergency fund is measured against essentials plus EMIs. Cash balance comes from the opening balance plus the ledger. Past loan and investment values are anchored to today's stored values.
+- `repositories/user_data.py` loads everything into a DataFrame and dataclasses. `services/analytics/aggregations.py` covers ranges (presets and custom), overview with previous-period comparison, categories, day/month trends with a running cash balance, and top merchants.
+- Endpoints: `GET /digital-twin[?as_of]`, `/digital-twin/history` (lazy backfill), `/analytics/{overview,categories,trends,merchants}`.
+- Recalculation after successful writes on the transactions (except preview), profile and holdings blueprints. The seed builds snapshots too.
+- Tests: 214 pass. There are 19 builder tests with hand-computed numbers: ₹1L − ₹60k = ₹40k, zero income, zero expenses, negative flow, no history, partial-month exclusion, an empty month counted as zero, cash before and after the opening date, loan anchoring, duplicate investments, goals and net worth. There are also analytics unit tests, API tests (declared → observed switch, recalculation, preview not recalculating, failure isolation, lazy backfill, `as_of`, validation), and a "demo story holds" regression test.
+- Live check on the seeded data: savings ratio 16.8%, emergency 1.48 months, debt-to-income 10.6%, 23 monthly snapshots, Food & Dining +69% against the previous 3 months. A ₹1L purchase lowered the twin's cash immediately.
+- Problems found and fixed:
+  - Investments were keyed by an equal-valued dataclass, so identical holdings merged.
+  - A vacuous test assertion (`or True`).
+  - Two of my tests depended on today's date.
+  - Percentage change against a negative baseline flipped sign; it now uses `/|previous|` and also returns absolute changes.

@@ -21,6 +21,7 @@ from app.models import (
 )
 from app.models.enums import AssetType, CategorySource, EmploymentType, LoanType, RiskTolerance
 from app.seed.synthetic import Persona, generate_transactions, month_starts
+from app.services.digital_twin.service import refresh_snapshots
 from app.services.financial.formulas import emi, future_value, outstanding_after
 
 HISTORY_MONTHS = 24
@@ -173,4 +174,5 @@ def seed_demo(today: date | None = None, reset: bool = False) -> SeedResult:
         ]
     )
     db.session.commit()
+    refresh_snapshots(user.id)
     return SeedResult(created=True, email=email, transactions=len(rows))

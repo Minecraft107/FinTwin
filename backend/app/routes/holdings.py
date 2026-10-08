@@ -19,11 +19,12 @@ from app.schemas.holdings import (
     LoanOut,
     LoanUpdate,
 )
+from app.services.digital_twin.service import recalculate_after_writes
 from app.services.financial.formulas import emi
 from app.utils.auth import current_user_id, protect
 from app.utils.http import ApiError, ok
 
-bp = protect(Blueprint("holdings", __name__))
+bp = recalculate_after_writes(protect(Blueprint("holdings", __name__)))
 
 
 def register_crud(

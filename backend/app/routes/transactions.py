@@ -15,12 +15,15 @@ from app.schemas.transactions import (
     TransactionOut,
     TransactionUpdate,
 )
+from app.services.digital_twin.service import recalculate_after_writes
 from app.services.importer.csv_import import CategoryRef, CsvFormatError, preview_csv
 from app.services.ml.categorizer import categorize
 from app.utils.auth import current_user_id, protect
 from app.utils.http import ApiError, ok
 
-bp = protect(Blueprint("transactions", __name__))
+bp = recalculate_after_writes(
+    protect(Blueprint("transactions", __name__)), skip=("import_preview",)
+)
 
 MAX_PER_PAGE = 200
 

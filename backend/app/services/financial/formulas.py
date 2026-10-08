@@ -34,3 +34,17 @@ def future_value(
         return present + monthly_contribution * months
     growth = (1 + r) ** months
     return present * growth + monthly_contribution * (growth - 1) / r
+
+
+def value_months_ago(
+    current: float, monthly_contribution: float, annual_rate: float, months: int
+) -> float:
+    """Inverse of future_value: estimated value `months` ago, given today's value and the
+    contributions made since. Floored at 0 (the holding may not have existed then)."""
+    if months <= 0:
+        return current
+    r = annual_rate / 12
+    if r == 0:
+        return max(current - monthly_contribution * months, 0.0)
+    growth = (1 + r) ** months
+    return max((current - monthly_contribution * (growth - 1) / r) / growth, 0.0)
