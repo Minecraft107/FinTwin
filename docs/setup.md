@@ -24,16 +24,26 @@ cd backend
 python -m venv .venv
 .venv\Scripts\activate          # macOS/Linux: source .venv/bin/activate
 pip install -r requirements-dev.txt
+```
+Create the schema and the demo data. Run these once, and again after pulling new migrations:
+```bash
+flask db upgrade
+```
+```bash
+flask seed
+```
+`flask seed` is idempotent. It creates the 22 reference categories and a demo user with 24 months of synthetic history ending **today**. The demo login is the `DEMO_EMAIL` / `DEMO_PASSWORD` pair in `.env`. To regenerate the demo data, for example after a month has passed:
+```bash
+flask seed --reset
+```
+Start the API:
+```bash
 python run.py
 ```
 Check: `http://localhost:5000/api/health` → `{"data": {"status": "ok", "database": "up", ...}}`.
 If Postgres is not running, the same endpoint returns **503** with `"database": "down"`; the app itself keeps running.
 
-Quick try without Docker (temporary in-memory DB; data is lost on restart):
-```bash
-DATABASE_URL=sqlite:///:memory: python run.py
-```
-PowerShell: `$env:DATABASE_URL="sqlite:///:memory:"; python run.py`
+Quick try without Docker: set `DATABASE_URL=sqlite:///fintwin-dev.db` in `.env`, then run the same upgrade → seed → run steps. PostgreSQL remains the supported database.
 
 ## 4. Frontend (Vite + React, port 5173)
 ```bash

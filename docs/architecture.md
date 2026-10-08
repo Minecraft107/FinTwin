@@ -95,6 +95,17 @@ users ─┬─< financial_profiles (1:1)
 
 **Deliberate deviation: there is no separate `income_records` table.** Income is a `transaction` with `type='income'` and an income category (Salary, Freelance, Bonus, Interest…). A single ledger means cash flow is always `Σincome − Σexpense` over one table, so nothing can be double-counted between two sources.
 
+**Categories (22, global):**
+- **Income:** Salary, Freelance, Bonus, Interest, Other Income
+- **Essential:** Housing, Utilities, Groceries, Transport, Healthcare, Insurance, Education, Family Support
+- **Discretionary:** Food & Dining, Shopping, Entertainment, Subscriptions, Travel, Personal Care, Other
+- **Investment:** Investment
+- **Debt:** EMI/Debt
+
+The synopsis' single "Food" category is split into Groceries (essential) and Food & Dining (discretionary). Without that split, the essential-vs-discretionary analysis would mix needs and wants.
+
+**Enums** are stored as `VARCHAR + CHECK` rather than native PostgreSQL ENUM types, so new values never need an `ALTER TYPE` migration. Constraint names follow a fixed naming convention (`ck_<table>_<name>`, `fk_<table>_<col>_<ref>`…), which keeps Alembic diffs stable.
+
 **Manual category correction** sets `category_source='manual'`. On later imports, the categorizer first looks up the user's own manual corrections for the same normalized description. This gives per-user learning without an extra table.
 
 ---

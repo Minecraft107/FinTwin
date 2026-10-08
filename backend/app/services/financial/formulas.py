@@ -1,0 +1,36 @@
+"""Core time-value-of-money formulas. Pure functions, monthly compounding, rates as fractions."""
+
+
+def emi(principal: float, annual_rate: float, months: int) -> float:
+    """Equated monthly instalment: P·r·(1+r)^n / ((1+r)^n − 1)."""
+    if months <= 0:
+        raise ValueError("months must be positive")
+    r = annual_rate / 12
+    if r == 0:
+        return principal / months
+    growth = (1 + r) ** months
+    return principal * r * growth / (growth - 1)
+
+
+def outstanding_after(
+    principal: float, annual_rate: float, months: int, payments_made: int
+) -> float:
+    """Remaining loan balance after `payments_made` EMIs."""
+    k = min(max(payments_made, 0), months)
+    r = annual_rate / 12
+    if r == 0:
+        return principal * (1 - k / months)
+    growth = (1 + r) ** k
+    balance = principal * growth - emi(principal, annual_rate, months) * (growth - 1) / r
+    return max(balance, 0.0)
+
+
+def future_value(
+    present: float, monthly_contribution: float, annual_rate: float, months: int
+) -> float:
+    """Value after `months` of a lump sum plus end-of-month contributions."""
+    r = annual_rate / 12
+    if r == 0:
+        return present + monthly_contribution * months
+    growth = (1 + r) ** months
+    return present * growth + monthly_contribution * (growth - 1) / r

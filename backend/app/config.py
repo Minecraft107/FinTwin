@@ -31,6 +31,8 @@ class Config:
     FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")
     MAX_CONTENT_LENGTH = 2 * 1024 * 1024  # CSV upload limit
     MIGRATIONS_DIR = str(REPO_ROOT / "database" / "migrations")
+    DEMO_EMAIL = os.getenv("DEMO_EMAIL", "demo@fintwin.app")
+    DEMO_PASSWORD = os.getenv("DEMO_PASSWORD", "FinTwin@Demo2026")
 
 
 class TestingConfig(Config):

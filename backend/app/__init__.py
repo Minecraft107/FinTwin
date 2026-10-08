@@ -17,13 +17,16 @@ def create_app(config: type[Config] | None = None) -> Flask:
     app.config.from_object(config)
 
     db.init_app(app)
-    migrate.init_app(app, db, directory=app.config["MIGRATIONS_DIR"])
+    migrate.init_app(app, db, directory=app.config["MIGRATIONS_DIR"], render_as_batch=True)
     jwt.init_app(app)
     cors.init_app(app, resources={r"/api/*": {"origins": app.config["FRONTEND_ORIGIN"]}})
 
     register_error_handlers(app)
 
+    from app import models  # noqa: F401  (registers every table on db.metadata)
+    from app.cli import register_cli
     from app.routes.system import bp as system_bp
 
     app.register_blueprint(system_bp, url_prefix="/api")
+    register_cli(app)
     return app

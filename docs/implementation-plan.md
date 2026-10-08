@@ -46,6 +46,7 @@ Companion to [architecture.md](architecture.md). This file records scope, risks,
 | 11 | Demo data must stay current | The seed generates the 24 months ending on the **current** month, so "last 30 days" always has data. |
 | 12 | Multi-currency, joint accounts, taxes | Out of scope: INR only, single user, pre-tax not modelled (income is treated as take-home). |
 | 13 | JWT in localStorage | Accepted for the prototype and documented, with the cookie+CSRF upgrade path. |
+| 14 | Goal contributions have no ledger rows: money moved to a goal account is not an expense | `goal.current_amount` is a balance held outside the cash account. The simulator funds goals from the monthly surplus rather than adding them as an extra outflow, which avoids double counting (decided in Phase 3, implemented in Phase 8). |
 
 ## 3. Key technical decisions
 
@@ -64,14 +65,16 @@ The demo persona is a salaried professional in a metro city. The seed covers 24 
 
 | Pattern | Demonstrates |
 |---|---|
-| Salary ₹95k on the 1st, +8% raise at month 13, annual bonus in March | Income forecasting, `one_time_income` |
-| Rent ₹22k, utilities peaking Apr–Jun (AC) | Essential spend, seasonality |
-| Weekly groceries with noise; food delivery rising ~40% over the last 4 months | Category drift alert, score-decrease explanation |
-| Diwali (Oct–Nov) shopping spike each year | Seasonality → XGBoost month features |
-| SIP ₹10k (10th), car-loan EMI ₹12.5k (5th), Netflix/Spotify/gym | Investments, DTI, recurring detection |
-| Injected anomalies: ₹48k electronics, ₹18k hospital bill, one duplicate charge, one travel-heavy month | Anomaly detection with known labels |
-| Emergency fund ≈ 2.1 months | Weakness in the score, emergency-fund alert, coach question |
-| Goals: Car ₹8L in 24 months, Emergency-fund top-up, Europe trip | Goal feasibility with priorities, `goal_delay` scenario |
+| Salary ₹95k on the 1st, +8% raise at month 13, March bonus (0.6× salary), occasional freelance income | Income forecasting, `one_time_income` |
+| Rent ₹26k, ₹8k monthly family support, utilities peaking Apr–Jun (AC) | Essential spend, seasonality |
+| Weekly groceries with noise; food delivery ×1.3 → ×2.2 over the final months (≈ ₹7k → ₹14k/month) | Category drift alert, score-decrease explanation |
+| Diwali (Oct–Nov) shopping spike each year; June insurance premium; December trip | Seasonality → XGBoost month features |
+| SIP ₹10k (10th), education-loan EMI ₹11,115 (5th; ₹6L @ 10%, 72 months), Netflix/Spotify/gym | Investments, DTI, recurring detection |
+| Injected anomalies: ₹48k laptop, ₹18.5k hospital bill, one duplicate charge, one Goa-trip month | Anomaly detection with known labels |
+| Emergency fund ₹95k ≈ 1.8 months of essentials | Weakness in the score, emergency-fund alert, coach question |
+| Goals: Car ₹8L in 24 months (₹2L saved), Europe trip ₹3L in 18 months, Higher studies ₹5L in 36 months. Planned contributions (₹29k/month) exceed the recent surplus | Goal feasibility with priorities, `goal_delay` scenario |
+
+Resulting demo profile, from the generator: about 1,160 transactions. The savings ratio falls from ≈ 22% to ≈ 10% over the last three full months, and the cash balance is ≈ ₹2.3L.
 
 The same generator, with randomised persona parameters, builds the ~300-user training population (§7 of architecture).
 
@@ -109,3 +112,18 @@ Each phase ends with: tests run → errors fixed → behaviour verified → docs
 - Verified: 10 pytest tests pass; ruff clean; oxlint clean; `npm run build` ok; `docker compose config` valid; live backend returns 503 "degraded" with Postgres down and 200 with SQLite; browser shows "Backend ok · database up" through the Vite proxy.
 - Open: Docker Desktop did not start non-interactively, so `docker compose up db` → healthy has to be confirmed once it is running (carried into Phase 3, which needs it anyway).
 - Deviation: the Vite template now ships **oxlint** instead of ESLint. Kept, since it's faster and needs zero config.
+
+### Phase 3: Schema & seed data ✅ (2026-10-08), PostgreSQL verified offline only
+- 15 SQLAlchemy 2 models (`app/models/`) with CHECK/UNIQUE/FK constraints, cascades, indexes, portable enums, and a constraint naming convention. SQLite foreign-key enforcement is switched on for tests.
+- Alembic migration `0001_initial_schema` in `database/migrations`. Removed the duplicate enum CHECKs that autogenerate adds.
+- `services/financial/formulas.py`: EMI, outstanding balance and future value.
+- `app/seed/`: 22 categories (idempotent), a deterministic synthetic generator with labelled anomalies, and the demo user with consistent loan, SIP, investments and goals. `flask seed [--reset]`.
+- Tests: 48 pass. Formulas are checked against hand calculations; each constraint is tested with ORM and raw SQL; cascade and RESTRICT; generator determinism, coverage, labels, festive spike and dining creep; seed idempotency and reset; and the migration is checked to build exactly the models' tables and columns, enforce CHECKs, and downgrade cleanly.
+- Verified via the CLI: `flask db upgrade` + `flask seed` on a fresh SQLite file (1,160 transactions in ~1 s, idempotent). `flask db upgrade --sql` compiles valid PostgreSQL DDL.
+- Problems fixed:
+  - The `date` column annotation shadowed the `date` type.
+  - Autogenerate duplicated the enum CHECK constraints.
+  - A deprecated `get_engine()` call in `env.py`.
+  - The first demo data had dining creep hidden by noise and an unrealistically large cash pile; the persona was re-tuned.
+  - A cp1252 encoding crash in a helper script emptied `docs/setup.md`; it was restored from git.
+- Open: run `flask db upgrade` against live PostgreSQL once Docker Desktop is running.
