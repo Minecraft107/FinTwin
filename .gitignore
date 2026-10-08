@@ -1,0 +1,26 @@
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node
+node_modules/
+dist/
+
+# ML artifacts are rebuilt by `flask ml train-all`; metrics are kept
+ml/models/*.joblib
+ml/models/*.json
+ml/datasets/generated/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

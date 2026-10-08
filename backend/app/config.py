@@ -1,0 +1,62 @@
+"""Environment-driven configuration. All secrets come from env vars (see .env.example)."""
+
+import os
+from datetime import timedelta
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+load_dotenv(REPO_ROOT / ".env")
+
+DEFAULT_JWT_SECRET = "change-me"
+DEFAULT_DATABASE_URL = "postgresql+psycopg://fintwin:fintwin@localhost:5432/fintwin"
+
+
+def _engine_options(uri: str) -> dict:
+    options: dict = {"pool_pre_ping": True}
+    if uri.startswith("postgresql"):
+        # Fail fast instead of hanging when Postgres is down; /api/health then reports 503.
+        options["connect_args"] = {"connect_timeout": 3}
+    return options
+
+
+class Config:
+    APP_ENV = "development"
+    LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL", DEFAULT_DATABASE_URL)
+    SQLALCHEMY_ENGINE_OPTIONS = _engine_options(SQLALCHEMY_DATABASE_URI)
+    JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", DEFAULT_JWT_SECRET)
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=12)
+    FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")
+    MAX_CONTENT_LENGTH = 2 * 1024 * 1024  # CSV upload limit
+    MIGRATIONS_DIR = str(REPO_ROOT / "database" / "migrations")
+
+
+class TestingConfig(Config):
+    APP_ENV = "testing"
+    TESTING = True
+    SQLALCHEMY_DATABASE_URI = "sqlite://"
+    SQLALCHEMY_ENGINE_OPTIONS = _engine_options("sqlite://")
+    JWT_SECRET_KEY = "test-secret-key-that-is-long-enough-for-hs256"
+
+
+class ProductionConfig(Config):
+    APP_ENV = "production"
+
+
+CONFIGS: dict[str, type[Config]] = {
+    "development": Config,
+    "testing": TestingConfig,
+    "production": ProductionConfig,
+}
+
+
+def get_config(env: str | None = None) -> type[Config]:
+    env = env or os.getenv("APP_ENV", "development")
+    if env not in CONFIGS:
+        raise RuntimeError(f"Unknown APP_ENV '{env}'. Use one of: {', '.join(CONFIGS)}")
+    config = CONFIGS[env]
+    if config is ProductionConfig and config.JWT_SECRET_KEY == DEFAULT_JWT_SECRET:
+        raise RuntimeError("JWT_SECRET_KEY must be set to a strong random value in production.")
+    return config
