@@ -235,3 +235,25 @@ Full description: [simulation.md](simulation.md).
   - 17 service and API tests: formula parity of the future twin, LOW / CRITICAL / HIGH cases, goals reached sooner, the response contract, the single-change body, validation, the saved-scenario lifecycle with cascade, privacy, and declared-profile users.
   - 1 health-score test for reached goals.
 - Demo (live): the spec example (₹1,30,000 laptop on 2027-01-01) runs in 0.23 s → LOW: −₹1,30,000 cash, score 68 vs 68, about 17 months to save up instead. A ₹4L purchase → CRITICAL, short ₹70,466 in Nov 2026 (matches the hand calculation to the paisa). "Job change" (−20% income + ₹5k SIP, 36 months) → CRITICAL, score 68.3 → 44.8.
+
+### Phase 9: Goal Planner ✅ (2026-10-08)
+- `formulas.py`: `required_payment` (annuity: P = (FV − PV(1+i)ⁿ)i/((1+i)ⁿ−1)) and `months_to_target` (n = ln((FV·i+P)/(PV·i+P))/ln(1+i)), both exact at i = 0.
+- `goals.allocate_surplus` now also reports each goal's surplus `capacity`.
+- `goal_planner.py` (pure), per goal:
+  - required, planned and *fundable* monthly saving
+  - shortfall per month and at the target date
+  - completion dates at the planned and fundable pace
+  - status: on_track / at_risk / off_track / overdue / no_target_date / achieved / paused
+  - a sensitivity table (±₹2k/±₹5k), concrete options (increase, free up spending, extend date, reduce target), and an explanation
+  - an optional annual-return assumption (default 0)
+- Endpoints: `GET /goals/plan`, `GET /goals/:id/plan`, `POST /goals/:id/simulate`. The simulate endpoint tries contribution, target, date, priority, return and extra-surplus changes without saving, and lists the other goals whose funding changes.
+- Tests: 376 pass (+18).
+  - The spec's car example: ₹8L target, ₹2L saved, 24 months → ₹25,000/month, back to exactly 24 months.
+  - Return round-trips through `future_value` at 6% and 12%; zero-saving, already-reached and growth-only edge cases.
+  - Every status, priority sharing, the sensitivity table (60/47/40/36/30 months), the returns assumption, overrides and extra surplus.
+  - API: demo plans in priority order, validation, 404, privacy, re-prioritisation effects, nothing persisted.
+- Demo (live): surplus ₹7,720. The car needs ₹25,000 and gets ₹7,720 (Apr 2033); the trip and studies goals get ₹0 because the car takes the whole surplus. All three are off track. Simulating a ₹10k spending cut, a ₹25k plan and a 7% return moves the car to Apr 2029 (at risk, ₹1.15L short on the target date).
+- Problems found and fixed:
+  - A "lower the target" option was suggested even when the surplus funded nothing (it just restated the saved amount).
+  - One test assumed raising a goal to priority 1 outranks another priority-1 goal; ties go to the older goal, so the test now demotes the car instead.
+  - A redundant field-renaming map was removed.

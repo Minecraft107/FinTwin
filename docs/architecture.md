@@ -301,7 +301,14 @@ if cash < 0: draw from emergency fund; if emergency fund exhausted → shortfall
 
 ---
 
-## 9. Goal planner (`services/financial/goals.py`)
+## 9. Goal planner (`services/financial/goals.py`, `goal_planner.py`)
+
+> **Implemented-design note (Phase 9):**
+> - Planned contributions are distinguished from *fundable* ones (what the surplus covers after higher priorities).
+> - Statuses: on_track / at_risk / off_track / overdue / no_target_date / achieved / paused.
+> - Each plan includes concrete options (increase, free up spending, extend date, reduce target).
+> - `POST /goals/:id/simulate` uses planner arithmetic and reports which other goals gain or lose surplus. Whole-finance effects stay with the What-If engine.
+> - Schemas are in [api.md](api.md).
 
 For each goal:
 * `required_monthly` = the annuity payment that reaches the target by the target date: `(FV − PV·(1+r)ⁿ)·r / ((1+r)ⁿ − 1)`. With r = 0 this reduces to `(FV − PV)/n`. Here r is the goal's assumed monthly return (default 0, i.e. savings account).

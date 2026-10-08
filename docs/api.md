@@ -327,4 +327,43 @@ Response (abridged):
 | `POST /simulation/scenarios/:id/run` | Re-runs against your *current* data and stores a new result |
 | `DELETE /simulation/scenarios/:id` | `204`; its results are deleted too |
 
+## Goal planner
+Goal CRUD is under *Investments · Loans · Goals*. The planner endpoints never save anything.
+
+Formulas, with i = annual_return/12 and n = months to the target date:
+- **Required monthly saving:** `P = (FV − PV·(1+i)ⁿ)·i / ((1+i)ⁿ − 1)`, or `(FV − PV)/n` when i = 0.
+- **Months to reach the target at saving P:** `n = ln((FV·i + P)/(PV·i + P)) / ln(1+i)`.
+
+The monthly surplus (twin `net_cash_flow`) is allocated to active goals in priority order. Ties go to the older goal.
+
+### `GET /goals/plan[?annual_return=0..0.15]` and `GET /goals/:id/plan`
+`annual_return` defaults to 0 (a savings account). `meta` gives `as_of` and `monthly_surplus`.
+```json
+{ "goal_id": 1, "name": "Buy a car", "priority": 1, "status": "off_track",
+  "target_amount": 800000.0, "current_amount": 200000.0, "remaining": 600000.0, "progress_pct": 25.0,
+  "target_date": "2028-10-08", "months_left": 24, "annual_return_assumed": 0.0,
+  "required_monthly": 25000.0, "planned_monthly": 15000.0, "fundable_monthly": 7719.81,
+  "surplus_capacity": 7719.81, "shortfall_monthly": 17280.19,
+  "projected_at_target_date": 385275.44, "shortfall_at_target_date": 414724.56,
+  "completion_at_planned": "2030-02", "completion_at_fundable": "2033-04",
+  "sensitivity": [{"change": -5000, "monthly": 10000.0, "months_to_complete": 60,
+                   "completion": "2031-10", "meets_target_date": false, "affordable": false}],
+  "options": [{"type": "increase_contribution", "monthly": 25000.0, "text": "Save ₹25,000/month instead of ₹15,000 (+₹10,000)."},
+              {"type": "free_up_spending", "monthly": 17280.19, "text": "..."},
+              {"type": "extend_target_date", "target_date": "2033-04", "text": "..."},
+              {"type": "reduce_target", "target_amount": 385275.44, "text": "..."}],
+  "explanation": "To reach ₹8,00,000 by 2028-10 you need about ₹25,000/month. You plan ₹15,000/month, and after higher-priority goals your surplus can fund ₹7,720/month. ...",
+  "disclaimer": "..." }
+```
+- `status`:
+  - `on_track`: the surplus funds the requirement
+  - `at_risk`: the plan is enough, but the surplus can't fund it
+  - `off_track`: the plan itself is too small
+  - `overdue`, `no_target_date`, `achieved`, `paused`
+- `sensitivity` covers the planned contribution ±₹2,000 / ±₹5,000. `affordable` means the amount fits within this goal's share of the surplus.
+
+### `POST /goals/:id/simulate`
+Body (all optional): `monthly_contribution`, `target_amount`, `target_date`, `priority` (1–5), `annual_return` (0–0.15), `extra_monthly_surplus` (e.g. a planned spending cut).
+→ `{changes, current, simulated, other_goals_affected: [{goal_id, name, fundable_before, fundable_after}]}`, where `current` and `simulated` are plans in the shape above. Re-prioritising one goal shows which other goals gain or lose surplus. For the effect on your whole finances (cash, score, risk), use `/simulation/what-if` with `goal_delay` or `extra_savings`.
+
 The coach endpoints are documented when Phase 10 lands.

@@ -18,6 +18,7 @@ class GoalFunding:
     required_monthly: float | None  # None when the goal has no target date
     planned_monthly: float
     fundable_monthly: float  # what the surplus can actually cover after higher priorities
+    capacity: float  # surplus still available when this goal's turn comes
     months_left: int | None
 
 
@@ -44,6 +45,7 @@ def allocate_surplus(goals, surplus: float, as_of: date) -> list[GoalFunding]:
             continue
         left = months_left(g.target_date, as_of)
         planned = g.monthly_contribution
+        capacity = available
         fundable = min(planned, available)
         available -= fundable
         result.append(
@@ -54,6 +56,7 @@ def allocate_surplus(goals, surplus: float, as_of: date) -> list[GoalFunding]:
                 required_monthly=required_monthly(remaining, left),
                 planned_monthly=planned,
                 fundable_monthly=fundable,
+                capacity=capacity,
                 months_left=left,
             )
         )

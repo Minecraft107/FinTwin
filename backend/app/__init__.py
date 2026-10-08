@@ -27,6 +27,7 @@ def create_app(config: type[Config] | None = None) -> Flask:
         analytics,
         auth,
         forecast,
+        goals,
         health,
         holdings,
         profile,
@@ -52,6 +53,7 @@ def create_app(config: type[Config] | None = None) -> Flask:
         forecast,
         risks,
         simulation,
+        goals,
     ):
         app.register_blueprint(module.bp, url_prefix=f"/api{module.bp.url_prefix or ''}")
     register_cli(app)

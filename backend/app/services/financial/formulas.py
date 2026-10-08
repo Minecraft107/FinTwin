@@ -1,5 +1,7 @@
 """Core time-value-of-money formulas. Pure functions, monthly compounding, rates as fractions."""
 
+import math
+
 
 def emi(principal: float, annual_rate: float, months: int) -> float:
     """Equated monthly instalment: P·r·(1+r)^n / ((1+r)^n − 1)."""
@@ -34,6 +36,34 @@ def future_value(
         return present + monthly_contribution * months
     growth = (1 + r) ** months
     return present * growth + monthly_contribution * (growth - 1) / r
+
+
+def required_payment(target: float, present: float, annual_rate: float, months: int) -> float:
+    """Monthly saving needed to grow `present` into `target` in `months`:
+    P = (FV − PV·(1+i)ⁿ)·i / ((1+i)ⁿ − 1), or (FV − PV)/n at zero return. Never negative."""
+    if months <= 0:
+        raise ValueError("months must be positive")
+    i = annual_rate / 12
+    if i == 0:
+        return max((target - present) / months, 0.0)
+    growth = (1 + i) ** months
+    return max((target - present * growth) * i / (growth - 1), 0.0)
+
+
+def months_to_target(
+    target: float, present: float, payment: float, annual_rate: float
+) -> int | None:
+    """Whole months until `present` plus monthly `payment` reaches `target`
+    (n = ln((FV·i + P)/(PV·i + P)) / ln(1+i)). None if it never does."""
+    if present >= target:
+        return 0
+    i = annual_rate / 12
+    if i == 0:
+        return math.ceil((target - present) / payment - 1e-9) if payment > 0 else None
+    if payment <= 0 and present <= 0:
+        return None
+    n = math.log((target * i + payment) / (present * i + payment)) / math.log(1 + i)
+    return math.ceil(n - 1e-9)
 
 
 def value_months_ago(
