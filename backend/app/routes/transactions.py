@@ -1,6 +1,6 @@
 from datetime import date
 
-from flask import Blueprint, request
+from flask import Blueprint, Response, request
 
 from app.extensions import db
 from app.models import Transaction
@@ -136,6 +136,18 @@ def delete_transaction(txn_id: int):
     db.session.delete(get_owned(Transaction, txn_id, current_user_id()))
     db.session.commit()
     return "", 204
+
+
+@bp.get("/transactions/import/sample")
+def import_sample():
+    """A fresh bank-statement CSV (6 months ending last month) to try the import with."""
+    from app.seed.sample_csv import sample_statement
+
+    return Response(
+        sample_statement(6),
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=fintwin-sample-statement.csv"},
+    )
 
 
 @bp.post("/transactions/import/preview")

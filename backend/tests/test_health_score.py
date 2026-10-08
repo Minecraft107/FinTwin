@@ -177,6 +177,14 @@ def test_reached_goal_counts_as_funded_not_excluded():
     assert only_reached.score == 100 and "1 goal(s) already reached" in only_reached.explanation
 
 
+def test_goal_recommendation_states_the_real_gap():
+    # 10k/month required, only 5k planned, ample surplus: the gap is the plan, not the surplus
+    result = score_twin(twin(goals=[goal(1, 1, monthly=5_000)], net_cash_flow=40_000.0))
+    rec = next(r for r in result.recommendations if r.component == "goals")
+    assert "need about ₹10,000/month" in rec.action and "only ₹5,000/month" in rec.action
+    assert "exceed" not in rec.action
+
+
 def test_anomalies_reduce_spending_score_when_assessed():
     assert score_twin(twin()).component("spending").score == 100
     assert score_twin(twin(), recent_high_alerts=2).component("spending").score == pytest.approx(

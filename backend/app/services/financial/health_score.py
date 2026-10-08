@@ -366,11 +366,16 @@ def _recommendation(key: str, t: TwinState) -> tuple[str, str]:
             "recommendation of any specific product."
         )
     if key == "goals":
-        planned = sum(g.monthly_contribution for g in t.goals if g.status == "active")
+        funding = [
+            f for f in allocate_surplus(t.goals, t.net_cash_flow, t.as_of) if f.required_monthly
+        ]
+        required = sum(f.required_monthly for f in funding)
+        fundable = sum(f.fundable_monthly for f in funding)
         return "Make your goals affordable", (
-            f"Planned goal contributions ({inr(planned)}/month) exceed your monthly surplus "
-            f"({inr(max(t.net_cash_flow, 0))}). Extending target dates, reprioritising, or "
-            "freeing up spending would close the gap."
+            f"Your goals need about {inr(required)}/month to stay on schedule, but only "
+            f"{inr(fundable)}/month is being funded (monthly surplus "
+            f"{inr(max(t.net_cash_flow, 0))}). Raising contributions, extending target dates, "
+            "reprioritising, or freeing up spending would close the gap."
         )
     return "Rein in discretionary spending", (
         f"Discretionary spending is {pct(t.discretionary_expenses / t.monthly_income)} of income "

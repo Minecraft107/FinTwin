@@ -21,6 +21,17 @@ def register_cli(app: Flask) -> None:
         else:
             click.echo(f"Demo user {result.email} already exists (use --reset to regenerate)")
 
+    @app.cli.command("sample-csv")
+    @click.option("--months", default=6, show_default=True, type=click.IntRange(1, 36))
+    @click.option("--out", default="sample_statement.csv", show_default=True, type=click.Path())
+    def sample_csv(months: int, out: str) -> None:
+        """Write a bank-statement CSV (a new persona) for trying the import feature."""
+        from app.seed.sample_csv import sample_statement
+
+        with open(out, "w", encoding="utf-8", newline="") as f:
+            f.write(sample_statement(months))
+        click.echo(f"Wrote {out} ({months} months ending last month)")
+
     @app.cli.group("ml")
     def ml_group() -> None:
         """Offline ML pipeline."""

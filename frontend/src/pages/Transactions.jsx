@@ -4,7 +4,7 @@ import {
   Button, Card, EmptyState, ErrorState, Field, Input, Loading, Modal, PageHeader, Select, StatusBadge,
 } from '../components/ui'
 import { useApi } from '../hooks/useApi'
-import { api, errorText, request } from '../services/api'
+import { api, errorText, request, tokenStore } from '../services/api'
 import { dateLabel, inr, today } from '../utils/format'
 
 const PER_PAGE = 25
@@ -82,6 +82,15 @@ function TransactionForm({ categories, initial, onSaved, onCancel }) {
 
 const ROW_TONE = { ok: 'good', warning: 'warning', duplicate: 'info', error: 'critical' }
 
+// The sample needs the auth header, so it is fetched and handed to the browser as a file.
+async function downloadSample() {
+  const res = await fetch('/api/transactions/import/sample', { headers: { Authorization: `Bearer ${tokenStore.get()}` } })
+  const url = URL.createObjectURL(await res.blob())
+  const a = Object.assign(document.createElement('a'), { href: url, download: 'fintwin-sample-statement.csv' })
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 function ImportWizard({ categories, onDone }) {
   const [preview, setPreview] = useState(null)
   const [rows, setRows] = useState([])
@@ -135,6 +144,7 @@ function ImportWizard({ categories, onDone }) {
     return (
       <div className="text-sm text-ink-2">
         <p>Upload a CSV bank statement. Columns are matched by name: <code>date, description, amount, type, category</code>, or bank style <code>Txn Date, Narration, Withdrawal Amt, Deposit Amt</code>. Nothing is saved until you confirm.</p>
+        <p className="mt-2">No statement handy? <button type="button" className="font-medium text-brand-700 underline" onClick={downloadSample}>Download a sample statement</button> (6 months of realistic data) and upload it.</p>
         <label className="mt-4 flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-line p-8 text-center hover:border-brand-500">
           <Upload className="size-6 text-ink-3" aria-hidden />
           <span className="font-medium text-ink">{busy ? 'Checking your file…' : 'Choose a .csv file'}</span>

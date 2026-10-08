@@ -146,6 +146,20 @@ def test_top_merchants_falls_back_to_description():
     assert rows[1]["merchant"] == "Amazon" and rows[1]["total"] == 25_000
 
 
+@pytest.mark.parametrize(
+    "narration,label",
+    [
+        ("UPI/40212/RENT - UPI/LANDLORD", "UPI/RENT - UPI/LANDLORD"),
+        ("UPI/40234/DMART ORDER", "UPI/DMART ORDER"),
+        ("AMAZON ORDER 402-1234567", "AMAZON ORDER"),
+        ("1MG PHARMACY", "1MG PHARMACY"),
+        ("12345", "12345"),
+    ],
+)
+def test_merchant_label_drops_reference_numbers(narration, label):
+    assert agg.merchant_label(narration) == label
+
+
 def test_monthly_buckets_start_on_the_first():
     assert agg.bucket_start(date(2025, 10, 9), "month") == date(2025, 10, 1)
     assert agg.bucket_start(date(2025, 10, 9), "day") == date(2025, 10, 9)

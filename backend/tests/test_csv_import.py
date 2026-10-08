@@ -230,3 +230,23 @@ def test_upload_over_size_limit_rejected(api):
     res = _upload(api, "date,description,amount\n" + "2026-09-01,X,1\n" * 200_000)  # ~3 MB
     assert res.status_code == 413
     assert res.get_json()["error"]["code"] == "REQUEST_ENTITY_TOO_LARGE"
+
+
+def test_generated_sample_statement_imports_cleanly(api):
+    from app.seed.sample_csv import sample_statement
+
+    text = sample_statement(months=3, today=date(2026, 10, 9))
+    assert text.splitlines()[0] == "Txn Date,Narration,Withdrawal Amt,Deposit Amt"
+    preview = _upload(api, text).get_json()["data"]
+    assert preview["summary"]["error"] == 0
+    assert preview["summary"]["total"] == len(text.splitlines()) - 1
+    categories = {r["category_name"] for r in preview["rows"]}
+    assert {"Salary", "Housing", "Groceries", "Investment"} <= categories
+
+
+def test_sample_statement_download(api, client):
+    res = api.get("/api/transactions/import/sample")
+    assert res.status_code == 200 and res.mimetype == "text/csv"
+    assert "attachment" in res.headers["Content-Disposition"]
+    assert res.get_data(as_text=True).startswith("Txn Date,Narration")
+    assert client.get("/api/transactions/import/sample").status_code == 401

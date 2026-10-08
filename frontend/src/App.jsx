@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router'
-import { Loading } from './components/ui'
+import { ErrorState, Loading } from './components/ui'
 import { useAuth } from './context/AuthContext'
 import AppShell from './layouts/AppShell'
 import { Login, Register } from './pages/Auth'
@@ -19,9 +19,10 @@ const Coach = lazy(() => import('./pages/Coach'))
 const Profile = lazy(() => import('./pages/Profile'))
 
 function RequireAuth({ children }) {
-  const { user, loading } = useAuth()
+  const { user, loading, sessionError, retrySession } = useAuth()
   const location = useLocation()
   if (loading) return <Loading label="Restoring your session…" />
+  if (sessionError) return <div className="mx-auto max-w-md p-6"><ErrorState error={sessionError} onRetry={retrySession} /></div>
   if (!user) return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />
   return children
 }

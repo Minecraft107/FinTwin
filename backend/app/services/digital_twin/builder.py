@@ -43,6 +43,17 @@ def monthly_flows(txns: pd.DataFrame) -> pd.DataFrame:
     return table.reindex(columns=KINDS, fill_value=0.0).astype(float)
 
 
+def balance_unset(data: UserData) -> bool:
+    """No starting balance was ever given (₹0 dated after the first transaction): imported
+    history would otherwise be ignored, so the account is assumed to start at ₹0 with it."""
+    txns, profile = data.transactions, data.profile
+    return (
+        profile.opening_balance == 0
+        and not txns.empty
+        and profile.opening_balance_date > txns["date"].min().date()
+    )
+
+
 def cash_balance(data: UserData, as_of: date) -> float:
     """Opening balance (start of opening date) moved by every transaction since/before it."""
     txns, profile = data.transactions, data.profile
@@ -50,7 +61,7 @@ def cash_balance(data: UserData, as_of: date) -> float:
         return profile.opening_balance
     signed = txns["amount"].where(txns["type"] == "income", -txns["amount"])
     dates = txns["date"].dt.date
-    opening = profile.opening_balance_date
+    opening = txns["date"].min().date() if balance_unset(data) else profile.opening_balance_date
     if as_of >= opening:
         return profile.opening_balance + float(signed[(dates >= opening) & (dates <= as_of)].sum())
     return profile.opening_balance - float(signed[(dates > as_of) & (dates < opening)].sum())
@@ -170,6 +181,9 @@ def build_twin(
     active_goals = [g for g in data.goals if g.status != "paused"]
     goals_saved = sum(g.current_amount for g in active_goals)
     cash = cash_balance(data, as_of)
+    if balance_unset(data):
+        notes.append("No starting bank balance is set, so cash is the net of your recorded "
+                     "transactions from ₹0. Set your real balance in Profile.")  # fmt: skip
     if as_of < data.today:
         notes.append("Emergency fund and goal balances use today's values (no history is stored).")
 

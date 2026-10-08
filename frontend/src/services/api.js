@@ -2,6 +2,7 @@
 // {error: {code, message, details}} responses into ApiError.
 const BASE_URL = import.meta.env.VITE_API_URL ?? '/api'
 const TOKEN_KEY = 'fintwin.token'
+const UNREACHABLE = 'Cannot reach the FinTwin server. Check that the backend is running, then try again.'
 
 export class ApiError extends Error {
   constructor(status, code, message, details = {}) {
@@ -45,11 +46,13 @@ export async function request(path, { method = 'GET', body, headers = {} } = {})
       body: body && !isForm ? JSON.stringify(body) : body,
     })
   } catch {
-    throw new ApiError(0, 'NETWORK_ERROR', 'Cannot reach the FinTwin server.')
+    throw new ApiError(0, 'NETWORK_ERROR', UNREACHABLE)
   }
 
   if (res.status === 204) return { data: null, meta: {} }
   const payload = await res.json().catch(() => null)
+  // A non-JSON 5xx comes from the proxy (Vite / nginx), not the API: the API is down.
+  if (!payload && res.status >= 500) throw new ApiError(res.status, 'NETWORK_ERROR', UNREACHABLE)
   // /health answers 503 *with* data when degraded; every other error has no data.
   if (!res.ok && !payload?.data) {
     const err = payload?.error ?? {}

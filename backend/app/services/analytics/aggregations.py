@@ -1,5 +1,6 @@
 """Spending analytics over a date range. Pure pandas over the transactions DataFrame."""
 
+import re
 from datetime import date, timedelta
 
 import pandas as pd
@@ -170,12 +171,19 @@ def trends(
     return rows
 
 
+def merchant_label(description: str) -> str:
+    """Narration without reference numbers (UPI refs, order ids vary per payment), so repeat
+    payments to one merchant group together: 'UPI/40212/DMART' -> 'UPI/DMART'."""
+    text = re.sub(r"[\d-]*\d{4,}[\d-]*", "", description)
+    return re.sub(r"\s*([/-])(\s*[/-])+\s*", r"\1", text).strip(" /-") or description
+
+
 def top_merchants(txns: pd.DataFrame, start: date, end: date, limit: int) -> list[dict]:
     window = _slice(txns, start, end)
     window = window[window["type"] == "expense"]
     if window.empty:
         return []
-    name = window["merchant"].fillna(window["description"])
+    name = window["merchant"].fillna(window["description"].map(merchant_label))
     grouped = (
         window.assign(name=name)
         .groupby("name")

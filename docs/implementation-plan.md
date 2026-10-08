@@ -325,3 +325,33 @@ Full description: [simulation.md](simulation.md).
   - Asset labels ("Ppf" → "PPF").
   - The single 788 kB bundle (code-split).
   - Setting state in effects in Profile and the Simulator (state is now initialised directly).
+
+### Phase 12: Integration & end-to-end acceptance ✅ (2026-10-09)
+- **Walkthrough as a brand-new user** (browser, live API on SQLite, ML models loaded), covering all 18 acceptance criteria:
+  1. Register.
+  2. Profile saved (bank balance, emergency fund) → twin, score and alerts recalculated.
+  3. CSV import of a downloaded 6-month sample statement (240 rows) via the wizard, plus one manual category correction.
+  4–6. Dashboard, score and the Digital Twin.
+  7. Analytics.
+  8. Forecast.
+  9. Risks, with re-scan.
+  10–11. A goal created in the form, with a feasibility plan (checked by hand: ₹1,30,000 ÷ 14 months = ₹9,286).
+  12–13. A ₹90,000 purchase simulated, current vs simulated (cash −₹54,721 + goal savings −₹35,279 = −₹90,000).
+  14–16. Coach: "why did my score drop" and "can I afford a phone for 40k", answered from the engine with sources.
+  17. Reload keeps the session and data.
+  18. Setup docs.
+- **Error paths:**
+  - Backend stopped → a readable "cannot reach the server" message with Try again, and the session is kept.
+  - Retry after restart restores the session.
+  - An invalid token → logged out to /login.
+- **Added:**
+  - `GET /transactions/import/sample` and `flask sample-csv` (`app/seed/sample_csv.py`, a different persona from the demo).
+  - The "Download a sample statement" link in the import wizard.
+- **Problems found and fixed:**
+  - A new user who imported history saw cash ₹0 and a false HIGH "low cash balance" alert: the opening balance (₹0, dated at registration) ignored all earlier transactions. Now, an unset balance counts history from ₹0 at the first transaction, with a twin note asking for the real balance (`balance_unset`).
+  - The health recommendation "Planned goal contributions (₹5,000) exceed your monthly surplus (₹8,949)" was false. It now states the real gap: needed vs funded per month.
+  - Top merchants split one payee into many rows, because each UPI narration carries a unique reference number. These are now grouped on the narration without long digit runs.
+  - A stopped backend showed "Bad Gateway" (a non-JSON 5xx from the proxy is now reported as server unreachable).
+  - Any `/auth/me` failure, including a server restart, logged the user out. Now only a 401 does.
+  - Reserved `.test` email domains are rejected by the validator (it's the documented behaviour; walkthrough uses example.com).
+- **Checks:** 470 backend tests pass (+9). ruff is clean. oxlint has 0 errors (the same 2 accepted warnings). The build succeeds.

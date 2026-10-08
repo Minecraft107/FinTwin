@@ -49,6 +49,11 @@ The password must be 8–128 characters with at least one letter and one digit. 
 ### `GET /auth/me`
 → `200 {"data": {"id", "email", "full_name", "created_at"}}`
 
+### `POST /auth/demo`
+No body. Signs in as the seeded demo user (same shape as login). Enabled by `DEMO_LOGIN_ENABLED` (default on, off in `ProductionConfig`) → `404 NOT_FOUND` when disabled or when `flask seed` has not been run.
+
+The frontend logs out only on `401`. If `/auth/me` fails for any other reason (server down), the token is kept and a "Try again" screen is shown.
+
 ## Financial profile
 ### `GET /financial-profile`
 ```json
@@ -123,7 +128,11 @@ Date formats: `YYYY-MM-DD`, `DD/MM/YYYY`, `DD-MM-YYYY`, `DD/MM/YY`, `DD-Mon-YYYY
 ### `POST /transactions/import`
 `{ "transactions": [ <preview row.transaction>, ... ] }` (1–5000 rows). The client sends back the rows the user confirmed, optionally with the category edited. Every row is re-validated on the server, and the import is all-or-nothing. → `201 {"data": {"imported": 14}}`
 
-A sample file for trying this on a fresh account: `database/seed/sample_bank_statement.csv`. It includes one duplicate and two invalid rows on purpose.
+Sample files for trying this on a fresh account:
+- `GET /transactions/import/sample` (auth) downloads `fintwin-sample-statement.csv`: 6 months of realistic statement rows (`Txn Date, Narration, Withdrawal Amt, Deposit Amt`, dd/mm/yyyy, UPI refs) ending on the last complete month. The same file comes from `flask sample-csv [--months N] [--out FILE]`, and the import wizard links to it.
+- `database/seed/sample_bank_statement.csv`: a small fixed file with one duplicate and two invalid rows on purpose.
+
+If the account never had a starting balance set (₹0, dated after the first imported transaction), cash is computed from ₹0 at the first transaction and the twin adds a note asking for the real balance.
 
 ## Investments · Loans · Goals
 All three share the same shape: `GET /x` (list), `POST /x` (201), `PUT /x/:id` (partial), `DELETE /x/:id` (204). Each user sees only their own rows; another user's id returns 404.
@@ -195,7 +204,11 @@ Every endpoint takes a date range: `range=7d|30d|3m|6m|12m` (default `3m`, endin
 | `GET /analytics/overview` | `current` and `previous` (the equal-length period immediately before), each with `income, expenses, essential, discretionary, debt_payments, investments, net_cash_flow, savings_ratio, avg_daily_spend, transaction_count`. Also `change.{metric}: {abs, pct}` (pct is relative to \|previous\|, and null when previous is 0) and `essential_share` / `discretionary_share` |
 | `GET /analytics/categories` | Expense outflows per category: `category, kind, total, count, share, previous_total, change_pct`, largest first |
 | `GET /analytics/trends[&granularity=day\|month]` | One row per day or month (auto: daily under 62 days): `period, income, expenses, essential, discretionary, debt_payments, investments, net_cash_flow, savings_ratio, cash_balance`. `cash_balance` is the running balance, i.e. the savings trend |
-| `GET /analytics/merchants[&limit=1..50]` | Top merchants by spend (falls back to description): `merchant, total, count, category` |
+| `GET /analytics/merchants[&limit=1..50]` | Top merchants by spend: `merchant, total, count, category`. Without a merchant, the description is used with reference numbers (runs of 4+ digits, e.g. UPI refs) removed, so `UPI/40212/DMART` and `UPI/40234/DMART` group as `UPI/DMART` |
+
+## Dashboard
+### `GET /dashboard`
+One twin build for the whole dashboard → `{twin, health, trends, alerts, goals, forecast}`: the twin as in `/digital-twin`, the health score, 12 monthly trend rows (first bucket starts on the 1st), active alerts, goal plans, and the expense forecast (`status: ok` with `history`/`forecast`/`model`/`confidence`, or a `message`).
 
 ## Financial Health Score
 ### `GET /health-score[?compare_months=1..12]`

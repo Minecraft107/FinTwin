@@ -244,3 +244,16 @@ def test_monthly_snapshot_dates():
         date(2026, 3, 31),
     ]
     assert monthly_snapshot_dates(UserData(today=TODAY)) == []
+
+
+def test_unset_balance_counts_imported_history_from_zero():
+    # New account: balance ₹0 dated today (registration), history imported afterwards.
+    profile = ProfileData(opening_balance=0, opening_balance_date=TODAY)
+    twin = build_twin(data(Q1, profile=profile))
+    assert twin.cash_balance == 3 * 40_000
+    assert any("No starting bank balance" in n for n in twin.notes)
+    # An explicitly set balance is respected and no note is added.
+    set_profile = ProfileData(opening_balance=5_000, opening_balance_date=TODAY)
+    twin = build_twin(data(Q1, profile=set_profile))
+    assert twin.cash_balance == 5_000
+    assert not any("No starting bank balance" in n for n in twin.notes)
