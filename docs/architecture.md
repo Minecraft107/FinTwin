@@ -244,6 +244,14 @@ Isolation Forest is only fitted once there are at least 60 transactions. Below t
 
 ## 8. What-If Simulation Engine (`services/simulation`)
 
+> **Implemented-design note (Phase 8):** [simulation.md](simulation.md) is the authoritative reference. Refinements made over this plan:
+> - Goals are funded only from cash above a one-month buffer.
+> - The first EMI falls due the month after disbursement.
+> - Impact is scenario − baseline at a 12-month checkpoint, with both futures scored by the same `derive()` / Health Score code.
+> - Goal completion beyond the horizon is extrapolated and flagged as estimated.
+> - An extra MEDIUM rule fires when cash falls below one month of outgoings.
+
+
 The engine is deterministic. It's a month-by-month cash-flow projector, and no randomness or LLM is involved.
 
 ```

@@ -9,6 +9,7 @@ Pure function of (UserData, as_of). Rules:
   they are worked back with the amortization / compounding formulas.
 """
 
+from dataclasses import replace
 from datetime import date
 
 import pandas as pd
@@ -139,7 +140,6 @@ def build_twin(
     else:
         invest, sources["investment_contributions"] = planned_contrib, "holdings"
 
-    expenses = essential + discretionary
     by_category: dict[str, float] = {}
     discretionary_by_category: dict[str, float] = {}
     if n:
@@ -189,41 +189,71 @@ def build_twin(
         for g in sorted(data.goals, key=lambda g: (g.priority, g.id))
     ]
 
-    return TwinState(
-        as_of=as_of,
-        window_months=n,
-        window_start=window_periods[0].to_timestamp().date() if n else None,
-        window_end=last_complete if n else None,
-        months_of_history=span,
-        monthly_income=income,
+    return derive(
+        TwinState(
+            as_of=as_of,
+            window_months=n,
+            window_start=window_periods[0].to_timestamp().date() if n else None,
+            window_end=last_complete if n else None,
+            months_of_history=span,
+            monthly_income=income,
+            essential_expenses=essential,
+            discretionary_expenses=discretionary,
+            debt_payments=debt_payments,
+            investment_contributions=invest,
+            expenses_by_category=by_category,
+            discretionary_by_category=discretionary_by_category,
+            cash_balance=cash,
+            emergency_fund=profile.emergency_fund,
+            investments_value=investments_value,
+            investment_allocation=allocation,
+            total_debt=total_debt,
+            goals_saved=goals_saved,
+            recent_months=[
+                MonthFlow(str(p), *(float(recent.loc[p, k]) for k in KINDS)) for p in recent.index
+            ],
+            goals=goals,
+            sources=sources,
+            notes=notes,
+            **_UNDERIVED,
+        )
+    )
+
+
+# Placeholders for the fields `derive` computes, so there is one copy of each formula.
+_UNDERIVED = dict.fromkeys(
+    ("monthly_expenses", "net_cash_flow", "disposable_income", "burn_rate_daily", "net_worth",
+     "savings_ratio", "expense_ratio", "debt_to_income", "emergency_months", "investment_rate"),
+    0.0,
+)  # fmt: skip
+
+
+def derive(t: TwinState) -> TwinState:
+    """Recompute every derived field from the base flows and balances. Used by the builder
+    and by the simulator, so a simulated future state is scored with identical formulas."""
+    income, essential, discretionary = (
+        t.monthly_income,
+        t.essential_expenses,
+        t.discretionary_expenses,
+    )
+    debt, invest = t.debt_payments, t.investment_contributions
+    expenses = essential + discretionary
+    return replace(
+        t,
         monthly_expenses=expenses,
-        essential_expenses=essential,
-        discretionary_expenses=discretionary,
-        debt_payments=debt_payments,
-        investment_contributions=invest,
-        expenses_by_category=by_category,
-        discretionary_by_category=discretionary_by_category,
-        net_cash_flow=income - expenses - debt_payments - invest,
-        disposable_income=income - essential - debt_payments,
-        burn_rate_daily=(expenses + debt_payments) / DAYS_PER_MONTH,
-        cash_balance=cash,
-        emergency_fund=profile.emergency_fund,
-        investments_value=investments_value,
-        investment_allocation=allocation,
-        total_debt=total_debt,
-        goals_saved=goals_saved,
-        net_worth=cash + profile.emergency_fund + investments_value + goals_saved - total_debt,
-        savings_ratio=_ratio(income - expenses - debt_payments, income),
+        net_cash_flow=income - expenses - debt - invest,
+        disposable_income=income - essential - debt,
+        burn_rate_daily=(expenses + debt) / DAYS_PER_MONTH,
+        net_worth=t.cash_balance
+        + t.emergency_fund
+        + t.investments_value
+        + t.goals_saved
+        - t.total_debt,
+        savings_ratio=_ratio(income - expenses - debt, income),
         expense_ratio=_ratio(expenses, income),
-        debt_to_income=_ratio(debt_payments, income),
-        emergency_months=_ratio(profile.emergency_fund, essential + debt_payments),
+        debt_to_income=_ratio(debt, income),
+        emergency_months=_ratio(t.emergency_fund, essential + debt),
         investment_rate=_ratio(invest, income),
-        recent_months=[
-            MonthFlow(str(p), *(float(recent.loc[p, k]) for k in KINDS)) for p in recent.index
-        ],
-        goals=goals,
-        sources=sources,
-        notes=notes,
     )
 
 

@@ -280,18 +280,29 @@ def _investments(t: TwinState) -> Measure:
 
 def _goals(t: TwinState) -> Measure:
     funding = [f for f in allocate_surplus(t.goals, t.net_cash_flow, t.as_of) if f.required_monthly]
-    if not funding:
+    # Reached goals count as fully funded: reaching a goal must never lower the score (it would
+    # if the component were excluded and the remaining weights renormalised).
+    achieved = [
+        g for g in t.goals
+        if g.status == "achieved" or (g.status == "active" and g.current_amount >= g.target_amount)
+    ]  # fmt: skip
+    if not funding and not achieved:
         return Measure(None, None, "n/a", "", "No active goals with a target date.")
-    weights = [6 - f.priority for f in funding]
+    weights = [6 - f.priority for f in funding] + [6 - g.priority for g in achieved]
     ratios = [min(f.fundable_monthly / f.required_monthly, 1.0) for f in funding]
+    ratios += [1.0] * len(achieved)
     score = 100 * sum(w * r for w, r in zip(weights, ratios, strict=True)) / sum(weights)
     required = sum(f.required_monthly for f in funding)
     fundable = sum(f.fundable_monthly for f in funding)
-    return Measure(
-        score, score / 100, f"{score:.0f}%",
+    text = (
         f"Your goals need about {inr(required)}/month to stay on schedule; your current surplus "
-        f"can fund {inr(fundable)}/month of that.",
-    )  # fmt: skip
+        f"can fund {inr(fundable)}/month of that."
+        if funding
+        else ""
+    )
+    if achieved:
+        text += f"{' ' if text else ''}{len(achieved)} goal(s) already reached."
+    return Measure(score, score / 100, f"{score:.0f}%", text)
 
 
 def _spending(t: TwinState, recent_high_alerts: int | None) -> Measure:

@@ -280,4 +280,51 @@ Re-runs detection; this also happens automatically after every data change. Retu
 ### `GET /ml/status`
 Which trained artifacts are loaded (`forecaster`, `categorizer`), plus the latest evaluation metrics from `ml/models/metrics/`.
 
-The simulation and coach endpoints are documented as their phases land.
+## What-If Simulation
+Engine and formulas: [simulation.md](simulation.md).
+
+### `POST /simulation/what-if`
+The body is either a single change (spec example) or a full scenario:
+```json
+{ "type": "large_purchase", "amount": 130000, "date": "2027-01-01" }
+```
+```json
+{ "changes": [{"type": "income_change", "pct": -20}, {"type": "sip_change", "amount": 5000}],
+  "horizon_months": 24, "inflation_pct": 0 }
+```
+Change types: `large_purchase`, `income_change`, `expense_change`, `sip_change`, `new_loan`, `extra_savings`, `goal_delay`, `one_time_income` (parameters are in simulation.md §3).
+
+Response (abridged):
+```json
+{ "scenario": {...},
+  "current_state":   { "as_of": "2026-10-08", "cash_balance": 226800.01, "net_worth": 836338.05, "savings_ratio": 0.1684, "health_score": 64.9, "grade": "C", "...": 0 },
+  "baseline_state":  { "as_of": "2027-10-31", "cash_balance": 226814.12, "health_score": 68.3, "...": 0 },
+  "simulated_state": { "as_of": "2027-10-31", "cash_balance": 96814.12,  "health_score": 68.3, "...": 0 },
+  "impact": { "checkpoint_month": "2027-10", "cash_change": -130000.0, "savings_change": 0.0,
+              "health_score_change": 0.0, "goal_delay": 0, "net_worth_change": -130000.0,
+              "monthly_cash_flow_change": 0.0, "emergency_fund_drawn": 0.0,
+              "first_shortfall_month": null, "max_shortfall": 0.0, "...": 0 },
+  "goals": [{ "goal_id": 1, "name": "Buy a car", "target_date": "2028-10", "baseline_completion": "2033-04",
+              "scenario_completion": "2033-04", "scenario_completion_estimated": true, "delay_months": 0,
+              "on_track": false, "saved_at_checkpoint": {"baseline": 292637.72, "scenario": 292637.72} }],
+  "risk_level": "LOW", "risk_factors": [],
+  "recommendation": "Based on the simulated assumptions, this scenario does not materially weaken your position. At your current monthly surplus of ₹7,720, saving ₹1,30,000 would take about 17 month(s).",
+  "explanation": "Simulated over 24 months. By 2027-10, your net worth would be ₹10,77,450 versus ₹12,07,450 ...",
+  "timeline": [{ "month": "2026-11", "baseline": {"cash", "emergency_fund", "investments", "debt", "goals_saved", "net_worth", "net_cash_flow"}, "scenario": {...} }],
+  "assumptions": ["..."], "notes": [], "disclaimer": "..." }
+```
+- `current_state` is today.
+- `baseline_state` and `simulated_state` are the two futures at the checkpoint (12 months, or the horizon if shorter), and `impact` is their difference.
+- `risk_level` ∈ `LOW | MEDIUM | HIGH | CRITICAL`.
+- A `goal_delay` referring to a goal you don't own returns 400.
+
+### Saved scenarios
+| Endpoint | Purpose |
+|---|---|
+| `POST /simulation/scenarios` | Same body plus a required `name`. Runs and stores it → `201 {scenario, result}` |
+| `GET /simulation/scenarios` | Newest first, each with a `latest_result` summary (`risk_level`, `health_score_before/after`, `cash_change_12m`, `run_at`) |
+| `GET /simulation/scenarios/:id` | The scenario plus the stored result, including its timeline |
+| `POST /simulation/scenarios/:id/run` | Re-runs against your *current* data and stores a new result |
+| `DELETE /simulation/scenarios/:id` | `204`; its results are deleted too |
+
+The coach endpoints are documented when Phase 10 lands.

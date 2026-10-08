@@ -31,6 +31,7 @@ def create_app(config: type[Config] | None = None) -> Flask:
         holdings,
         profile,
         risks,
+        simulation,
         system,
         transactions,
         twin,
@@ -50,6 +51,7 @@ def create_app(config: type[Config] | None = None) -> Flask:
         health,
         forecast,
         risks,
+        simulation,
     ):
         app.register_blueprint(module.bp, url_prefix=f"/api{module.bp.url_prefix or ''}")
     register_cli(app)

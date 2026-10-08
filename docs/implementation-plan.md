@@ -215,3 +215,23 @@ Full methodology and results: [ml.md](ml.md).
   7. NumPy floats in JSON responses.
   8. The rules-only baseline was exposed to the ML stage (`match_rules` split out).
 - **Known limitation:** all ML is trained and evaluated on synthetic data (see ml.md §1).
+
+### Phase 8: What-If Simulation Engine ✅ (2026-10-08)
+Full description: [simulation.md](simulation.md).
+- `services/simulation/`:
+  - `scenarios.py`: 8 change types as a pydantic discriminated union, exactly one of `pct` / `amount`, up to 10 combined, horizon 6–60, inflation.
+  - `engine.py`: pure month-by-month projection. Amortised loans, investments compounding, goals funded by priority above a one-month cash buffer, emergency-fund draw, then shortfall.
+  - `service.py`: baseline from the twin, then baseline and scenario projections, future `TwinState`s scored with the same code, then impact, goal outcomes (with pace-based estimates beyond the horizon), risk level and factors, deterministic recommendation and explanation, and assumptions.
+- Refactor: `derive()` in the twin builder is now the single copy of every ratio formula, used by both the builder and the simulator.
+- Endpoints: `POST /simulation/what-if` (accepts the spec's single-change body), plus saved scenarios (create, list, detail, re-run, delete). Results are stored in `simulation_results`.
+- **Problem found by the simulator and fixed in the health score:** reaching a goal excluded the goals component and *lowered* the score through renormalisation. Reached goals now count as fully funded.
+- Other fixes during the phase:
+  - Goals drained cash to ₹0 after a shortfall (now a one-month buffer).
+  - Extra savings showed "+₹0 cash" (impact now includes goal-savings and net-worth changes, and the explanation leads with net worth).
+  - Goal delays were never measurable for slow goals (now extrapolated from pace and flagged as estimated).
+  - Two documentation numbers were corrected after checking them against the engine.
+- Tests: 358 pass (+44).
+  - 26 engine tests with hand calculations: ₹1.3L purchase, EF draw, ₹4L shortfall recovery, −20% income, the ₹5L @ 12% / 60-month EMI of ₹11,122.22 with next-month start, a financed purchase ending, SIP compounding, the extra-savings floor, temporary and percentage expense changes, one-time income, existing loans ending, goal priority funding, the cash buffer, goal delay, out-of-horizon events, inflation, determinism, and validation.
+  - 17 service and API tests: formula parity of the future twin, LOW / CRITICAL / HIGH cases, goals reached sooner, the response contract, the single-change body, validation, the saved-scenario lifecycle with cascade, privacy, and declared-profile users.
+  - 1 health-score test for reached goals.
+- Demo (live): the spec example (₹1,30,000 laptop on 2027-01-01) runs in 0.23 s → LOW: −₹1,30,000 cash, score 68 vs 68, about 17 months to save up instead. A ₹4L purchase → CRITICAL, short ₹70,466 in Nov 2026 (matches the hand calculation to the paisa). "Job change" (−20% income + ₹5k SIP, 36 months) → CRITICAL, score 68.3 → 44.8.

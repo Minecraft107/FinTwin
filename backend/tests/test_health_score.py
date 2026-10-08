@@ -168,6 +168,15 @@ def test_goal_funding_by_priority():
     assert result.component("goals").score == pytest.approx(100 * 5 / 9)
 
 
+def test_reached_goal_counts_as_funded_not_excluded():
+    reached = goal(1, priority=1, target=100_000, current=100_000)
+    open_goal = goal(2, priority=2)  # 10k/month required, 0 surplus -> 0%
+    result = score_twin(twin(goals=[reached, open_goal], net_cash_flow=0.0))
+    assert result.component("goals").score == pytest.approx(100 * 5 / 9)
+    only_reached = score_twin(twin(goals=[reached])).component("goals")
+    assert only_reached.score == 100 and "1 goal(s) already reached" in only_reached.explanation
+
+
 def test_anomalies_reduce_spending_score_when_assessed():
     assert score_twin(twin()).component("spending").score == 100
     assert score_twin(twin(), recent_high_alerts=2).component("spending").score == pytest.approx(
