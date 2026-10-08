@@ -26,6 +26,7 @@ def create_app(config: type[Config] | None = None) -> Flask:
     from app.routes import (
         analytics,
         auth,
+        coach,
         forecast,
         goals,
         health,
@@ -54,6 +55,7 @@ def create_app(config: type[Config] | None = None) -> Flask:
         risks,
         simulation,
         goals,
+        coach,
     ):
         app.register_blueprint(module.bp, url_prefix=f"/api{module.bp.url_prefix or ''}")
     register_cli(app)

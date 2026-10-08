@@ -323,6 +323,15 @@ For each goal:
 
 ## 10. AI Financial Coach + RAG (`services/coach`)
 
+> **Implemented-design note (Phase 10):**
+> - **Intent detection:** uses weighted keyword rules instead of a trained classifier, since there is no real labelled question data and rules are deterministic and testable.
+> - **RAG index:** built in memory rather than persisted (~60 ms), and rebuilt when a guide changes.
+> - **LLM calls:** go over the standard library's `urllib`, with no vendor SDKs.
+> - **Grounding:** compares every ₹, % and decimal against the context (1% / 0.05 tolerance).
+> - **Answer sections:** answers add a `background` section for general knowledge.
+> - **Score explanations:** pick the comparison window (3, 6, 1 or 12 months) that matches what the user asks, and always state the date compared against.
+> - **References:** [ml.md](ml.md) §5 and [api.md](api.md).
+
 ```
 question
   │

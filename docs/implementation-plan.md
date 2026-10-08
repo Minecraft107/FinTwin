@@ -257,3 +257,32 @@ Full description: [simulation.md](simulation.md).
   - A "lower the target" option was suggested even when the surplus funded nothing (it just restated the saved amount).
   - One test assumed raising a goal to priority 1 outranks another priority-1 goal; ties go to the older goal, so the test now demotes the car instead.
   - A redundant field-renaming map was removed.
+
+### Phase 10: AI Financial Coach + RAG ✅ (2026-10-08)
+- **Knowledge base:** 13 original guides (`backend/knowledge_base/`). **RAG** (`services/coach/rag.py`): heading-based chunks (62), TF-IDF + LSA hybrid retrieval, one chunk per guide, absolute and relative score thresholds, an in-memory index that rebuilds when files change. Retrieval: hit@1 19/20, hit@3 20/20 on a labelled set; off-topic queries return nothing.
+- **Understanding the question:**
+  - `intent.py`: weighted keyword rules for 12 intents plus a concept-question fallback. This deliberately replaces the planned trained classifier, since there is no real labelled data.
+  - `entities.py`: Indian amounts (₹1,30,000 · 1.3 lakh · 5L · 2 crore · 15k), percentages, durations, goal names.
+  - `scenario_parser.py`: questions become validated simulator scenarios, with any assumptions stated.
+- **Context:** `context.py` builds pre-formatted sections per intent (CURRENT_FINANCIAL_STATE, FINANCIAL_HEALTH_SCORE, RECENT_TRANSACTIONS, FORECAST, RISKS, GOALS, SIMULATION_RESULTS).
+- **LLM layer** (`llm/`):
+  - A `CoachAnswer` schema separating facts, calculations, predictions, recommendations and background.
+  - OpenAI and Gemini over `urllib`, with the Gemini key sent in a header, never in the URL.
+  - A strict system prompt; the question is passed as data.
+- **Grounding:** `grounding.py` rejects any LLM answer containing a ₹, % or decimal value not in the context, knowledge or question. Fallback goes to `local.py`, which answers deterministically for every intent from backend results.
+- **Persistence:** `service.py` orchestrates the pipeline and persists conversations and messages (with structured answers, sources, simulation and diagnostics). Score explanations use the comparison window matching the question's direction.
+- **Endpoints:** `POST /coach/chat`, `GET/DELETE /coach/conversations[/:id]`. Config: `LLM_PROVIDER` (default local), keys and models in `.env.example`.
+- **Tests:** 458 pass (+82).
+  - 56 NLU tests: 20 intents, amount and percent and duration parsing, goal matching, every scenario change type with assumptions, retrieval quality and rebuild, and grounding extraction, tolerance and rejection.
+  - 26 service tests: the HTTP helper with a faked network (success, HTTP error, timeout), 9 intents on the demo in local mode, the simulator run for affordability, the score window, out-of-scope refusal, knowledge citations, an LLM grounded answer accepted, an invented number triggering fallback, invalid JSON / missing fields / timeout falling back, a missing key, provider selection, the Gemini key kept out of the URL, conversation history and deletion, validation, privacy, and new users.
+- **Live (local mode):** ~0.2–0.5 s per answer. Examples: "Can I afford ₹1,30,000?" → LOW with 17 months to save; "Why did my score decrease?" → "fell by 3 points since 2026-03-31 (68 → 65)…"; "5 lakh loan" → HIGH, score 68 → 47; "Which stock should I buy?" → refusal plus SEBI adviser.
+- **Problems found and fixed:**
+  - "get a bonus" was parsed as a purchase.
+  - The grounding check skipped small decimals and had a loose absolute tolerance (1.8 matched 1.5).
+  - Risk factors were filed as recommendations.
+  - Knowledge chunks contained bullet markers.
+  - Weakly related sources were cited.
+  - "Why did my score decrease?" was answered with a window in which it rose.
+  - Positive scenarios were described as merely "manageable".
+  - The shell mangled long heredocs; files were written via the editor instead.
+- **Not verified:** real OpenAI or Gemini calls (no API key in this environment). Provider request and response handling is covered by mocked tests only.

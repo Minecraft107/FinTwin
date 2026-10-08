@@ -139,7 +139,34 @@ The cascade (`app/services/ml/categorizer.py`) is: the user's own past correctio
 
 **Honest reading:** many merchant names are pure brands with no meaningful text ("Zara", "Toni and Guy"), and no text model can categorize those without outside knowledge. The ML stage adds value on descriptive local names ("…Medicals", "…Provisions", "…Tiffins"), and the threshold keeps it from guessing on the rest. Every user correction is remembered and takes precedence, so accuracy improves with use.
 
-## 5. Limitations & future work
+## 5. Retrieval for the AI Coach (RAG)
+
+**Knowledge base:** 13 short, original guides in `backend/knowledge_base/*.md`, covering budgeting (50/30/20), emergency funds, debt and EMIs, savings and cash flow, SIPs and compounding, asset allocation, goal planning, insurance, credit scores, inflation, big purchases, spending patterns, and how the health score works.
+
+**Pipeline** (`app/services/coach/rag.py`):
+1. Split each guide at its headings into ~120-word chunks with a 30-word overlap (62 chunks).
+2. Embed each chunk two ways: TF-IDF (word 1–2-grams), and LSA (TruncatedSVD, up to 64 dimensions) on top of it.
+3. Score chunks against the query by hybrid cosine similarity: 0.5 × TF-IDF + 0.5 × LSA.
+4. Return the top 3, at most one chunk per guide. A hit must score at least 0.12 *and* at least half the best hit's score.
+
+TF-IDF catches exact terms ("EMI", "SIP"), and LSA catches related wording: "rainy day savings for job loss" → *Emergency funds*. The index is built in memory in ~60 ms and rebuilt automatically when any guide changes. There's no torch or GPU dependency.
+
+**Evaluation** (`tests/test_coach_nlu.py::RETRIEVAL_SET`, 20 labelled questions):
+
+| | hit@1 | hit@3 |
+|---|---|---|
+| Hybrid TF-IDF + LSA | 19/20 (95%) | 20/20 (100%) |
+
+Off-topic queries ("best cricket team") retrieve nothing. **Caveat:** the questions were written alongside the guides, so this is a regression check rather than an independent benchmark.
+
+**Intent detection** uses transparent weighted keyword rules, not a trained model. There is no real labelled question data to learn from, and deterministic rules can be tested and explained case by case; 20 example questions are covered by tests.
+
+**Grounding check** (`app/services/coach/grounding.py`):
+- Every ₹ amount, percentage and decimal in an LLM answer must match, within 1% (or 0.05 for small values), a number in the context, the retrieved knowledge, or the question. Lakh and crore notation is understood.
+- Whole counts up to 12 and years are exempt.
+- Anything else, such as "₹7,720 × 12 = ₹92,640", rejects the answer, and the deterministic local answer is used instead.
+
+## 6. Limitations & future work
 
 - **Synthetic training data** (see §1). The next step is a consented, anonymised real dataset run through the same pipeline and evaluation.
 - **Forecasting:**

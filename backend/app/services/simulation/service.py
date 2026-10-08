@@ -272,7 +272,11 @@ def _recommendation(scenario: Scenario, level: str, impact: dict, base_surplus: 
             "Based on the simulated assumptions, this scenario is manageable but has trade-offs "
             "(listed under risk factors) that are worth weighing."
         )
-    elif (impact["health_score_change"] or 0) > 0 or impact["monthly_cash_flow_change"] > 0:
+    elif (
+        (impact["health_score_change"] or 0) > 0
+        or impact["monthly_cash_flow_change"] > 0
+        or impact["net_worth_change"] > 0
+    ):
         text = (
             "Based on the simulated assumptions, this scenario strengthens your financial position."
         )

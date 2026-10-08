@@ -42,6 +42,12 @@ flask ml train
 ```
 Artifacts go to `ml/models/` (git-ignored); evaluation metrics go to `ml/models/metrics/` (committed). See [ml.md](ml.md).
 
+AI Coach (optional). By default `LLM_PROVIDER=local`: the coach answers deterministically from your data, with no API key. To have an LLM write the explanations, set these in `.env`:
+- `LLM_PROVIDER=openai` with `OPENAI_API_KEY` (model `OPENAI_MODEL`, default `gpt-4o-mini`), or
+- `LLM_PROVIDER=gemini` with `GEMINI_API_KEY` (model `GEMINI_MODEL`, default `gemini-2.0-flash`).
+
+If the key is missing or invalid, the API fails, or an answer quotes a number not found in your data, the coach falls back to the local answer automatically.
+
 Start the API:
 ```bash
 python run.py

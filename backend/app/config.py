@@ -32,6 +32,13 @@ class Config:
     MAX_CONTENT_LENGTH = 2 * 1024 * 1024  # CSV upload limit
     MIGRATIONS_DIR = str(REPO_ROOT / "database" / "migrations")
     MODEL_DIR = os.getenv("MODEL_DIR", str(REPO_ROOT / "ml" / "models"))
+    # AI Coach: "local" (no key needed, deterministic), "openai" or "gemini".
+    LLM_PROVIDER = os.getenv("LLM_PROVIDER", "local")
+    LLM_TIMEOUT = float(os.getenv("LLM_TIMEOUT", "20"))
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+    OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+    GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
     DEMO_EMAIL = os.getenv("DEMO_EMAIL", "demo@fintwin.app")
     DEMO_PASSWORD = os.getenv("DEMO_PASSWORD", "FinTwin@Demo2026")
 
@@ -42,6 +49,7 @@ class TestingConfig(Config):
     SQLALCHEMY_DATABASE_URI = "sqlite://"
     SQLALCHEMY_ENGINE_OPTIONS = _engine_options("sqlite://")
     JWT_SECRET_KEY = "test-secret-key-that-is-long-enough-for-hs256"
+    LLM_PROVIDER = "local"
 
 
 class ProductionConfig(Config):

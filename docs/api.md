@@ -366,4 +366,28 @@ The monthly surplus (twin `net_cash_flow`) is allocated to active goals in prior
 Body (all optional): `monthly_contribution`, `target_amount`, `target_date`, `priority` (1–5), `annual_return` (0–0.15), `extra_monthly_surplus` (e.g. a planned spending cut).
 → `{changes, current, simulated, other_goals_affected: [{goal_id, name, fundable_before, fundable_after}]}`, where `current` and `simulated` are plans in the shape above. Re-prioritising one goal shows which other goals gain or lose surplus. For the effect on your whole finances (cash, score, risk), use `/simulation/what-if` with `goal_delay` or `extra_savings`.
 
-The coach endpoints are documented when Phase 10 lands.
+## AI Financial Coach
+### `POST /coach/chat`
+`{"message": "Can I afford a ₹1,30,000 laptop?", "conversation_id": null}`. The message is 1–1000 characters; send `conversation_id` to continue a conversation.
+```json
+{ "conversation_id": 3, "message_id": 12, "intent": "affordability", "provider": "local",
+  "answer": {
+    "summary": "Based on a simulation of spending ₹1,30,000 on a purchase now, this looks manageable (risk level: LOW).",
+    "facts": ["Monthly income ₹1,05,212; spending ₹76,376; EMIs ₹11,116; SIPs ₹10,000.", "..."],
+    "calculations": ["Cash after 12 months: ₹96,814 versus ₹2,26,814 without this change (-₹1,30,000).", "..."],
+    "predictions": ["Projections cover 24 months and assume your recent income and spending continue."],
+    "recommendations": ["Based on the simulated assumptions, ... saving ₹1,30,000 would take about 17 month(s)."],
+    "background": ["A purchase is comfortably affordable when ... (from 'Big purchases: affordability and timing')"] },
+  "text": "<the same answer rendered as Markdown>",
+  "sources": [{"doc": "big-purchases", "title": "Big purchases: affordability and timing", "heading": "Can I afford it?", "score": 0.41}],
+  "simulation": {"scenario": "spending ₹1,30,000 on a purchase now", "changes": [...], "risk_level": "LOW", "impact": {...}, "assumptions": []},
+  "context_sections": ["CURRENT_FINANCIAL_STATE", "SIMULATION_RESULTS", "FINANCIAL_HEALTH_SCORE", "GOALS"],
+  "disclaimer": "FinTwin is a decision-support and educational tool, not a licensed financial advisor. ..." }
+```
+- **`intent`:** `affordability`, `what_if`, `score_explanation`, `improve_health`, `overspending`, `emergency_fund`, `goal_planning`, `debt`, `forecast`, `risk`, `greeting`, `out_of_scope` (requests for specific stock, fund or crypto picks are declined with an educational redirect), or `concept_question` (answered from the knowledge base).
+- **Answer sections:** `facts` are your data, `calculations` are backend results, `predictions` are forecasts and projections (always estimates), `recommendations` are possible actions, and `background` is general knowledge with sources.
+- **`provider`:** `local` (default; deterministic answers built from backend results), `openai` or `gemini`, set by the `LLM_PROVIDER` env var.
+- **Grounding fields:** when an LLM is configured, the response includes `grounding: {checked, passed, unverified_numbers}`. If the LLM's answer quotes any number that isn't in the context it was given, or the call fails or returns invalid JSON, the local answer is returned instead, with `fallback_reason`.
+
+### Conversations
+`GET /coach/conversations` (newest first, with message counts) · `GET /coach/conversations/:id` (all messages, with stored `structured` answers) · `DELETE /coach/conversations/:id` (204). Another user's conversation returns 404.
