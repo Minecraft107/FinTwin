@@ -186,6 +186,12 @@ Each component maps one measurable indicator to a 0–100 sub-score through a **
 
 ## 6. Analytics, categorization, anomaly detection
 
+> **Implemented-design note (Phase 7):** [ml.md](ml.md) is the authoritative reference for the ML components, with measured results. Three things changed from the original plan below, each because the evaluation showed it was better:
+> 1. Forecast selection is *champion–challenger*: XGBoost unless a baseline is ≥ 20% better over 6 backtest months.
+> 2. Abnormal-month detection adds a same-month-last-year seasonal check.
+> 3. The categorizer is trained on a curated merchant corpus and evaluated by merchant-grouped CV.
+
+
 ### 6.1 Analytics (`services/analytics`)
 These are pandas aggregations over a date range (`7d/30d/3m/6m/12m/custom`): monthly income/expense/savings, category breakdown, essential vs discretionary split, income-vs-expense series, savings trend, top merchants, month-over-month change per category, and a debt overview built from loans.
 

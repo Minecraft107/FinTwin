@@ -48,15 +48,25 @@ class GoalData:
     status: str = "active"
 
 
-TRANSACTION_COLUMNS = ["date", "amount", "type", "category", "kind", "merchant", "description"]
+TRANSACTION_COLUMNS = [
+    "id",
+    "date",
+    "amount",
+    "type",
+    "category",
+    "kind",
+    "merchant",
+    "description",
+]
 
 
 def empty_transactions() -> pd.DataFrame:
     return pd.DataFrame(
         {
+            "id": pd.Series(dtype="int64"),
             "date": pd.Series(dtype="datetime64[ns]"),
             "amount": pd.Series(dtype=float),
-            **{c: pd.Series(dtype=object) for c in TRANSACTION_COLUMNS[2:]},
+            **{c: pd.Series(dtype=object) for c in TRANSACTION_COLUMNS[3:]},
         }
     )
 

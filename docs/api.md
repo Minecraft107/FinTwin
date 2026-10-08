@@ -233,4 +233,51 @@ Weights, indicators, formulas, guideline anchors, grade bands and the missing-da
 
 `GET /digital-twin` also includes a `health_score` summary: `{score, grade, label, components}`.
 
-The forecast, risk, simulation and coach endpoints are documented as their phases land.
+## Forecasts
+Forecasts start at the current calendar month and use complete months of history only. Methodology and accuracy are in [ml.md](ml.md).
+
+### `GET /forecast/expenses[?horizon=1..6]` (default 3)
+```json
+{ "status": "ok", "horizon": 3, "confidence": "medium",
+  "model": { "selected": "xgboost", "label": "XGBoost (global model)", "backtest_origins": 6,
+             "selection_rule": "XGBoost unless a baseline's backtest error is at least 20% lower",
+             "backtest": [{"model": "xgboost", "label": "...", "mae": 12454.47, "rmse": 20134.95, "mape": 0.1243}] },
+  "history": [{"month": "2026-09", "value": 81883.0}],
+  "forecast": [{"month": "2026-10", "value": 75896.78, "lower": 50091.84, "upper": 101701.73}],
+  "categories": [{"category": "Housing", "forecast": 26000.0, "recent_average": 26000.0, "change_pct": 0.0}],
+  "explanation": "Spending for 2026-10 is estimated at ₹75,897 (likely range ₹50,092–₹1,01,702) ...",
+  "notes": [], "disclaimer": "Forecasts are statistical estimates based on your past spending, not guarantees." }
+```
+- `lower` / `upper` give an ~80% range.
+- `confidence` ∈ `high | medium | low`, from the history length and the backtest error.
+- With no complete month of data, the response is `{"status": "insufficient_data", "message": ...}`.
+
+### `GET /forecast/cash-flow[?horizon=1..12]` (default 6)
+Per month: `income, expenses, emi, investments, net_cash_flow, net_lower, net_upper, cash_balance, cash_lower, cash_upper`, plus `starting_balance` (at the end of the last complete month), `history`, `model`, `confidence`, `explanation` and `notes`. Income is the median of the last 3 months. EMIs follow each loan's remaining tenure.
+
+The latest forecast per target is stored in `forecast_results`.
+
+## Risks & alerts
+### `GET /risks[?status=active|dismissed|all]` (default active)
+Most severe first; `meta.counts` gives counts per severity.
+```json
+{ "id": 7, "type": "category_spending_increase", "severity": "HIGH",
+  "title": "Food & Dining spending up 76%",
+  "explanation": "You spent ₹11,753/month on Food & Dining over the last 3 months, versus ₹6,695 in the 3 months before.",
+  "affected_metric": "category_spending", "metric_value": 11752.67,
+  "recommended_action": "Set a monthly limit for Food & Dining; bringing it back to ₹6,695 would free ₹5,058 a month.",
+  "transaction_id": null, "status": "active", "detected_at": "2026-10-08T12:00:00+00:00" }
+```
+`type` ∈ `unusual_transaction, duplicate_charge, abnormal_monthly_spending, category_spending_increase, low_savings, high_debt, emergency_fund_shortage, negative_cash_flow, low_cash_buffer`. `severity` ∈ `LOW, MEDIUM, HIGH, CRITICAL`.
+
+### `POST /risks/scan`
+Re-runs detection; this also happens automatically after every data change. Returns the active list.
+
+### `PATCH /risks/:id`
+`{"status": "dismissed" | "active"}`. A dismissed alert stays dismissed while its condition persists, and is removed once the condition clears.
+
+## ML status
+### `GET /ml/status`
+Which trained artifacts are loaded (`forecaster`, `categorizer`), plus the latest evaluation metrics from `ml/models/metrics/`.
+
+The simulation and coach endpoints are documented as their phases land.

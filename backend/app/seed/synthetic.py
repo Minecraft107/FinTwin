@@ -389,7 +389,7 @@ def generate_transactions(persona: Persona, end: date, months: int, seed: int = 
         if kind == "large_electronics":
             ledger.add(
                 _day(ms, 17),
-                48_000,
+                round(persona.salary * 0.505, -2),
                 "Shopping",
                 "Croma",
                 "CROMA ELECTRONICS - LAPTOP",
@@ -399,7 +399,7 @@ def generate_transactions(persona: Persona, end: date, months: int, seed: int = 
         elif kind == "hospital":
             ledger.add(
                 _day(ms, 22),
-                18_500,
+                round(persona.salary * 0.1947, -2),
                 "Healthcare",
                 "Apollo Hospitals",
                 "APOLLO HOSPITALS - INPATIENT BILL",
@@ -420,7 +420,7 @@ def generate_transactions(persona: Persona, end: date, months: int, seed: int = 
         elif kind == "travel_month":
             ledger.add(
                 _day(ms, 6),
-                14_200,
+                round(persona.salary * 0.1495, -2),
                 "Travel",
                 "IndiGo",
                 "INDIGO AIRLINES - GOA",
@@ -429,7 +429,7 @@ def generate_transactions(persona: Persona, end: date, months: int, seed: int = 
             )
             ledger.add(
                 _day(ms, 8),
-                16_800,
+                round(persona.salary * 0.1768, -2),
                 "Travel",
                 "Taj Hotels",
                 "TAJ HOLIDAY VILLAGE GOA",
@@ -439,7 +439,7 @@ def generate_transactions(persona: Persona, end: date, months: int, seed: int = 
             for d in (8, 9, 10, 11):
                 ledger.add(
                     _day(ms, d),
-                    _lognormal(rng, 1_400, 0.2),
+                    _lognormal(rng, persona.salary * 0.0147, 0.2),
                     "Food & Dining",
                     "Goa Restaurant",
                     "RESTAURANT GOA",
@@ -449,3 +449,46 @@ def generate_transactions(persona: Persona, end: date, months: int, seed: int = 
 
     ledger.rows.sort(key=lambda r: (r["date"], r["type"] != "income"))
     return ledger.rows
+
+
+def random_persona(rng: np.random.Generator, months: int) -> Persona:
+    """A plausible salaried persona for the ML training population. Amounts scale with salary
+    so that, e.g., a laptop purchase is an outlier relative to that user's own spending."""
+    salary = float(round(rng.lognormal(np.log(80_000), 0.5), -3))
+    salary = min(max(salary, 25_000), 400_000)
+
+    def share(lo: float, hi: float) -> float:
+        return float(round(salary * rng.uniform(lo, hi), -2))
+
+    creep = rng.random() < 0.35
+    loan = rng.random() < 0.5
+    anomaly_kinds = ["large_electronics", "hospital", "duplicate", "travel_month"]
+    n_anomalies = int(rng.integers(0, 4))
+    anomaly_months = rng.choice(np.arange(1, months), size=n_anomalies, replace=False)
+    return Persona(
+        employer="EMPLOYER PVT LTD",
+        salary=salary,
+        raise_pct=float(rng.uniform(0, 0.12)),
+        raise_after_months=int(rng.integers(6, months)),
+        bonus_month=int(rng.choice([3, 4, 12])),
+        bonus_multiple=float(rng.choice([0, 0.5, 1.0, 1.5])),
+        freelance_prob=float(rng.uniform(0, 0.4)),
+        rent=share(0.15, 0.35),
+        family_support=share(0.03, 0.12) if rng.random() < 0.5 else 0.0,
+        electricity_base=float(rng.uniform(800, 3_000)),
+        groceries_weekly=share(0.015, 0.035),
+        dining_orders_per_month=float(rng.uniform(3, 20)),
+        dining_median=float(rng.uniform(200, 700)),
+        dining_creep=tuple(float(x) for x in np.linspace(1.2, rng.uniform(1.5, 2.4), 4))
+        if creep
+        else (),
+        rides_per_month=float(rng.uniform(2, 15)),
+        shopping_per_month=float(rng.uniform(1, 6)),
+        shopping_median=share(0.008, 0.025),
+        festive_multiplier=float(rng.uniform(1.3, 3.5)),
+        health_premium=share(0.08, 0.25),
+        travel_budget=share(0.05, 0.3),
+        sips=(("SIP - INDEX FUND", share(0.02, 0.15), 10),) if rng.random() < 0.7 else (),
+        emi=share(0.05, 0.3) if loan else 0.0,
+        anomalies={int(m): str(rng.choice(anomaly_kinds)) for m in anomaly_months},
+    )

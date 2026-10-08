@@ -36,6 +36,12 @@ flask seed
 ```bash
 flask seed --reset
 ```
+Train the ML models (≈ 90 s). This is optional: without them the app falls back to baseline forecasting and rule-only categorization. Re-run it after changing anything in `ml/`:
+```bash
+flask ml train
+```
+Artifacts go to `ml/models/` (git-ignored); evaluation metrics go to `ml/models/metrics/` (committed). See [ml.md](ml.md).
+
 Start the API:
 ```bash
 python run.py

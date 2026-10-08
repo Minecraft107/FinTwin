@@ -1,4 +1,4 @@
-"""Transaction categorization cascade: user memory -> keyword rules -> (ML, Phase 7) -> fallback.
+"""Transaction categorization cascade: user memory -> keyword rules -> ML -> fallback.
 
 Works fully offline; no external API is used for categorization.
 """
@@ -8,8 +8,10 @@ from dataclasses import dataclass
 
 from app.models.enums import CategorySource, TransactionType
 from app.seed.categories import FALLBACK_EXPENSE_CATEGORY, FALLBACK_INCOME_CATEGORY
+from app.services.ml.artifacts import load_artifact
 
 RULE_CONFIDENCE = 0.9
+ML_CONFIDENCE_THRESHOLD = 0.55  # below this the ML guess is not trusted -> fallback category
 
 # Ordered: the first match wins, so specific patterns precede generic ones
 # (e.g. "swiggy instamart" -> Groceries before "swiggy" -> Food & Dining,
@@ -111,22 +113,47 @@ def duplicate_text(text: str) -> str:
     return _clean(text, keep_digits=True)
 
 
+def match_rules(
+    description: str, merchant: str | None, txn_type: TransactionType | str
+) -> str | None:
+    """Keyword rules only (also used by the offline evaluation as the rules-only baseline)."""
+    text = _clean(f"{description} {merchant or ''}", keep_digits=True)  # keeps "1mg"
+    for category, pattern in _COMPILED[TransactionType(txn_type)]:
+        if pattern.search(text):
+            return category
+    return None
+
+
+def _ml_guess(description: str, merchant: str | None) -> tuple[str, float] | None:
+    model = load_artifact("categorizer")
+    if model is None:
+        return None
+    proba = model.predict_proba([f"{description} {merchant or ''}"])[0]
+    best = int(proba.argmax())
+    return str(model.classes_[best]), float(proba[best])
+
+
 def categorize(
     description: str,
     merchant: str | None,
     txn_type: TransactionType | str,
     memory: dict[str, str] | None = None,
 ) -> Categorization:
-    """`memory` maps normalized description -> category name from the user's manual fixes."""
+    """Cascade: user memory -> keyword rules -> ML classifier (expenses, if confident) ->
+    fallback. `memory` maps normalized description -> category from the user's manual fixes."""
     txn_type = TransactionType(txn_type)
     key = normalize_description(description)
     if memory and key in memory:
         return Categorization(memory[key], CategorySource.MEMORY, 1.0)
 
-    text = _clean(f"{description} {merchant or ''}", keep_digits=True)  # keeps "1mg"
-    for category, pattern in _COMPILED[txn_type]:
-        if pattern.search(text):
-            return Categorization(category, CategorySource.RULE, RULE_CONFIDENCE)
+    rule = match_rules(description, merchant, txn_type)
+    if rule:
+        return Categorization(rule, CategorySource.RULE, RULE_CONFIDENCE)
+
+    if txn_type == TransactionType.EXPENSE:
+        guess = _ml_guess(description, merchant)
+        if guess and guess[1] >= ML_CONFIDENCE_THRESHOLD:
+            return Categorization(guess[0], CategorySource.ML, round(guess[1], 4))
 
     fallback = (
         FALLBACK_INCOME_CATEGORY

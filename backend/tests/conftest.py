@@ -1,9 +1,15 @@
-import pytest
+import os
+from pathlib import Path
 
-from app import create_app
-from app.config import TestingConfig
-from app.extensions import db
-from app.seed.categories import ensure_categories
+# Before importing the app: no test may depend on models trained on this machine.
+os.environ["MODEL_DIR"] = str(Path(__file__).parent / "_no_models")
+
+import pytest  # noqa: E402
+
+from app import create_app  # noqa: E402
+from app.config import TestingConfig  # noqa: E402
+from app.extensions import db  # noqa: E402
+from app.seed.categories import ensure_categories  # noqa: E402
 
 
 @pytest.fixture

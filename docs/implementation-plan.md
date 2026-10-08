@@ -180,3 +180,38 @@ Each phase ends with: tests run → errors fixed → behaviour verified → docs
   - A one-month comparison can rise when a bad month (June) leaves the 3-month window. That's correct, but it's why `compare_months` exists.
   - Writes now take ~0.4 s because all months are rebuilt; marked with a `ponytail:` note.
 - Deferred to Phase 7: the anomaly input to the spending component. `score_twin(recent_high_alerts=...)` already accepts it.
+
+### Phase 7: Forecasting, anomaly detection, ML categorizer ✅ (2026-10-08)
+Full methodology and results: [ml.md](ml.md).
+- **Offline pipeline (`ml/`):** a synthetic population (300 personas, about 404k transactions; `random_persona` added to the generator, with anomaly amounts scaled to salary), forecaster training and evaluation, categorizer training and evaluation, and anomaly evaluation. `python -m ml.pipeline` or `flask ml train` runs it in about 90 s. Artifacts are git-ignored; metrics JSON is committed.
+- **Forecasting:**
+  - `features.py` is shared by training and inference.
+  - Models: naive, moving average, seasonal naive, damped Holt, and a global XGBoost (scale-free, recursive).
+  - Champion–challenger `select_model`, shared with the evaluation.
+  - Empirical 80% bands, with a 5% σ floor.
+  - Expense and cash-flow forecasts with explanations. The cash-flow forecast uses median income and EMIs that end with each loan's tenure.
+  - Endpoints `/forecast/expenses`, `/forecast/cash-flow`, `/ml/status`. The latest forecasts are persisted.
+- **Anomalies and risk:**
+  - Robust category rule + Isolation Forest + duplicate detection.
+  - Abnormal months with a seasonal check, and category drift (trend or spike).
+  - Ratio rules on the twin.
+  - Fingerprinted alerts that persist dismissals and resolve automatically.
+  - `/risks`, `/risks/scan`, `PATCH /risks/:id`.
+  - `recalculate()` (snapshots + scores + alerts) runs after every write. HIGH anomalies in the last 30 days now feed the health score.
+- **Categorizer:** an ML stage (TF-IDF char+word → Logistic Regression, threshold 0.55) after the rules. `match_rules` was split out so the rules-only baseline can't be contaminated by a trained model. Corpus: 349 real-world merchants.
+- **Results (held-out):**
+  - Forecasting: XGBoost total-spend MAE ₹5,312 / R² 0.87, against ₹6,975 / 0.78 for the best baseline. The production rule scores ₹5,500.
+  - Anomalies: F1 0.79 (precision 0.65, recall 1.00). Months with a year of history: precision 0.76, recall 0.64.
+  - Categorizer cascade: 61.9% on unseen merchants, against 56.5% for rules alone; the ML stage is 92.7% accurate on the rules' misses where it's confident.
+- **Demo:** XGBoost is selected (₹12.5k backtest MAE over 6 months). Risks raised: Food & Dining +76% (HIGH), emergency fund shortage, duplicate charge. Score unchanged at 64.9.
+- **Tests:** 314 pass (+51). They cover baselines on known series, Holt damping, feature scale-invariance, training-row skipping, selection with the challenger margin, insufficient and short history, band widening and the floor, cash flow with median income and EMI end, the XGB artifact present and missing, forecast and status APIs, the rule and forest detectors with severities, duplicates, small categories, the 30-day window, abnormal and seasonal months, drift, every ratio rule, alert persistence and dismissal, the risk API and privacy, the ML stage threshold, corrupt artifacts, and an end-to-end pipeline run (24 users).
+- **Problems found and fixed:**
+  1. XGBoost R² −10, caused by the scale-1 fallback on all-zero history.
+  2. Squared-error loss replaced by absolute error (−25% MAE).
+  3. Naive per-user selection was worse than always XGBoost; replaced by champion–challenger.
+  4. Month-level precision was 0.10: seasonal months were flagged, and laptop months were labelled only at transaction level. Both were fixed (seasonal check, fair labels).
+  5. Tests silently used locally trained models; the test session now pins `MODEL_DIR` to an empty directory.
+  6. Zero-width forecast bands on steady histories (σ floor added).
+  7. NumPy floats in JSON responses.
+  8. The rules-only baseline was exposed to the ML stage (`match_rules` split out).
+- **Known limitation:** all ML is trained and evaluated on synthetic data (see ml.md §1).

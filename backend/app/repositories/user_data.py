@@ -27,6 +27,7 @@ from app.services.digital_twin.state import (
 def load_transactions(user_id: int) -> pd.DataFrame:
     rows = db.session.execute(
         db.select(
+            Transaction.id,
             Transaction.date,
             Transaction.amount,
             Transaction.type,

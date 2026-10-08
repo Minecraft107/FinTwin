@@ -9,6 +9,12 @@ from app.extensions import db
 from app.models import FinancialHealthScore, FinancialSnapshot
 from app.models.enums import SnapshotPeriod
 from app.repositories.user_data import load_user_data
+from app.services.analytics.anomalies import (
+    TransactionFlag,
+    detect_transaction_anomalies,
+    recent_high_count,
+)
+from app.services.analytics.risk_service import detect_risks, sync_alerts
 from app.services.digital_twin.builder import build_twin, monthly_snapshot_dates
 from app.services.digital_twin.state import TwinState, UserData
 from app.services.financial.health_score import (
@@ -26,6 +32,16 @@ WRITE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
 def current_twin(user_id: int, as_of: date | None = None) -> TwinState:
     return build_twin(load_user_data(user_id), as_of)
+
+
+def anomaly_flags(data: UserData) -> list[TransactionFlag]:
+    income = build_twin(data).monthly_income
+    return detect_transaction_anomalies(data.transactions, data.today, income)
+
+
+def scored(twin: TwinState, flags: list[TransactionFlag]) -> HealthScoreResult:
+    """Health score including the anomaly signal for the 30 days before the twin's date."""
+    return score_twin(twin, recent_high_alerts=recent_high_count(flags, twin.as_of))
 
 
 def _snapshot_values(twin: TwinState) -> dict:
@@ -62,7 +78,9 @@ def _sync_score(snapshot: FinancialSnapshot, result: HealthScoreResult) -> None:
             setattr(row, name, value)
 
 
-def refresh_snapshots(user_id: int, data: UserData | None = None) -> int:
+def refresh_snapshots(
+    user_id: int, data: UserData | None = None, flags: list[TransactionFlag] | None = None
+) -> int:
     """Recompute every monthly snapshot (and its health score) plus today's on-change one.
 
     Monthly snapshots are rebuilt (not appended) because an import or edit can change any
@@ -71,6 +89,7 @@ def refresh_snapshots(user_id: int, data: UserData | None = None) -> int:
     # ponytail: rebuilds every month on each write (~0.4 s per request for 24 months); rebuild
     # only from the earliest changed month onward if write latency or history length grows.
     data = data or load_user_data(user_id)
+    flags = anomaly_flags(data) if flags is None else flags
     existing = {
         (s.as_of, s.period): s
         for s in db.session.scalars(
@@ -90,7 +109,7 @@ def refresh_snapshots(user_id: int, data: UserData | None = None) -> int:
         else:
             for name, value in values.items():
                 setattr(snapshot, name, value)
-        _sync_score(snapshot, score_twin(twin))
+        _sync_score(snapshot, scored(twin, flags))
     for (_, period), stale in existing.items():
         if period == SnapshotPeriod.MONTHLY:
             db.session.delete(stale)
@@ -126,7 +145,7 @@ def recalculate_after_writes(bp: Blueprint, skip: tuple[str, ...] = ()) -> Bluep
         endpoint = (request.endpoint or "").rsplit(".", 1)[-1]
         if request.method in WRITE_METHODS and response.status_code < 400 and endpoint not in skip:
             try:
-                refresh_snapshots(current_user_id())
+                recalculate(current_user_id())
             except Exception:
                 db.session.rollback()
                 logger.exception("Digital Twin recalculation failed")
@@ -135,17 +154,27 @@ def recalculate_after_writes(bp: Blueprint, skip: tuple[str, ...] = ()) -> Bluep
     return bp
 
 
+def recalculate(user_id: int) -> None:
+    """Everything derived from the user's data: snapshots, health scores and risk alerts."""
+    data = load_user_data(user_id)
+    flags = anomaly_flags(data)
+    refresh_snapshots(user_id, data, flags)
+    alerts, _ = detect_risks(data, flags)
+    sync_alerts(user_id, alerts)
+
+
 def health_report(user_id: int, compare_months: int = 1) -> dict:
     """Current score plus an explanation of the change versus `compare_months` earlier
     (the twin rebuilt as of that many month-ends before the current averaging window)."""
     data = load_user_data(user_id)
     twin = build_twin(data)
-    current = score_twin(twin)
+    flags = anomaly_flags(data)
+    current = scored(twin, flags)
     report = current.to_dict()
     report["change"] = None
     if twin.window_end:
         previous_as_of = month_end(add_months(twin.window_end.replace(day=1), -compare_months))
         previous_twin = build_twin(data, previous_as_of)
         if previous_twin.window_months:
-            report["change"] = explain_change(current, score_twin(previous_twin))
+            report["change"] = explain_change(current, scored(previous_twin, flags))
     return report

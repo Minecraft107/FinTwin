@@ -1,0 +1,350 @@
+merchant,category
+BigBasket,Groceries
+DMart,Groceries
+Blinkit,Groceries
+Zepto,Groceries
+JioMart,Groceries
+Reliance Fresh,Groceries
+More Supermarket,Groceries
+Spencers Retail,Groceries
+Natures Basket,Groceries
+Star Bazaar,Groceries
+Ratnadeep Supermarket,Groceries
+Heritage Fresh,Groceries
+Easyday Club,Groceries
+Vishal Mega Mart,Groceries
+Lulu Hypermarket,Groceries
+Sri Balaji Provision Stores,Groceries
+Ganesh Kirana Store,Groceries
+Annapurna General Stores,Groceries
+Fresh Vegetables Mandi,Groceries
+Mother Dairy Booth,Groceries
+Nandini Milk Parlour,Groceries
+Amul Dairy Outlet,Groceries
+Country Delight,Groceries
+Milkbasket,Groceries
+Swiggy Instamart,Groceries
+FreshToHome,Groceries
+Licious,Groceries
+Swiggy,Food & Dining
+Zomato,Food & Dining
+Dominos Pizza,Food & Dining
+McDonalds,Food & Dining
+KFC,Food & Dining
+Burger King,Food & Dining
+Pizza Hut,Food & Dining
+Starbucks Coffee,Food & Dining
+Cafe Coffee Day,Food & Dining
+Chaayos,Food & Dining
+Haldirams,Food & Dining
+Barbeque Nation,Food & Dining
+Saravana Bhavan,Food & Dining
+Paradise Biryani,Food & Dining
+Behrouz Biryani,Food & Dining
+Faasos,Food & Dining
+EatSure,Food & Dining
+Subway Sandwiches,Food & Dining
+Theobroma Bakery,Food & Dining
+Wow Momo,Food & Dining
+Third Wave Coffee,Food & Dining
+Blue Tokai Coffee,Food & Dining
+Udupi Krishna Bhavan,Food & Dining
+Punjabi Dhaba,Food & Dining
+Social Bar and Kitchen,Food & Dining
+Truffles Restaurant,Food & Dining
+Meghana Foods,Food & Dining
+Baskin Robbins,Food & Dining
+Naturals Ice Cream,Food & Dining
+Uber,Transport
+Ola Cabs,Transport
+Rapido,Transport
+Namma Yatri,Transport
+Delhi Metro Rail,Transport
+Namma Metro,Transport
+Mumbai Metro One,Transport
+BEST Bus Pass,Transport
+BMTC Bus Pass,Transport
+Indian Oil Petrol Pump,Transport
+HP Petrol Pump,Transport
+Bharat Petroleum,Transport
+Shell Fuel Station,Transport
+Nayara Energy,Transport
+FASTag Recharge,Transport
+Parking Charges Mall,Transport
+Blu Smart Cabs,Transport
+Meru Cabs,Transport
+Yulu Bikes,Transport
+Bounce Rentals,Transport
+Auto Rickshaw Fare,Transport
+Mumbai Suburban Railway,Transport
+BESCOM Electricity,Utilities
+Tata Power,Utilities
+Adani Electricity,Utilities
+MSEDCL Bill,Utilities
+TNEB Electricity,Utilities
+BWSSB Water Bill,Utilities
+Delhi Jal Board,Utilities
+Indane Gas,Utilities
+Bharat Gas,Utilities
+HP Gas Booking,Utilities
+Mahanagar Gas,Utilities
+Airtel Broadband,Utilities
+Jio Fiber,Utilities
+ACT Fibernet,Utilities
+Hathway Broadband,Utilities
+BSNL Landline,Utilities
+Vi Postpaid,Utilities
+Airtel Postpaid,Utilities
+Jio Prepaid Recharge,Utilities
+Tata Play DTH,Utilities
+Dish TV Recharge,Utilities
+Excitel Broadband,Utilities
+Torrent Power,Utilities
+Landlord Rent Transfer,Housing
+House Rent Payment,Housing
+NoBroker Rent,Housing
+NestAway Rent,Housing
+Stanza Living,Housing
+Zolo Stays,Housing
+Apartment Maintenance Charges,Housing
+Society Maintenance,Housing
+MyGate Maintenance,Housing
+PG Accommodation Rent,Housing
+Urban Clap Plumbing,Housing
+Property Tax BBMP,Housing
+Apollo Pharmacy,Healthcare
+MedPlus,Healthcare
+Tata 1mg,Healthcare
+PharmEasy,Healthcare
+Netmeds,Healthcare
+Wellness Forever,Healthcare
+Apollo Hospitals,Healthcare
+Fortis Hospital,Healthcare
+Manipal Hospital,Healthcare
+Max Healthcare,Healthcare
+Narayana Health,Healthcare
+Practo Consultation,Healthcare
+Dr Lal PathLabs,Healthcare
+Thyrocare,Healthcare
+Metropolis Labs,Healthcare
+Clove Dental,Healthcare
+Lenskart,Healthcare
+Cult Fit Clinic,Healthcare
+City Care Clinic,Healthcare
+Guardian Pharmacy,Healthcare
+LIC Premium,Insurance
+Star Health Insurance,Insurance
+HDFC Ergo,Insurance
+ICICI Lombard,Insurance
+Acko General Insurance,Insurance
+Digit Insurance,Insurance
+Max Life Insurance,Insurance
+SBI Life,Insurance
+Niva Bupa,Insurance
+Care Health Insurance,Insurance
+Tata AIA Life,Insurance
+Bajaj Allianz,Insurance
+PolicyBazaar,Insurance
+Udemy,Education
+Coursera,Education
+Byjus,Education
+Unacademy,Education
+upGrad,Education
+Simplilearn,Education
+Great Learning,Education
+Vedantu,Education
+Physics Wallah,Education
+School Fees,Education
+College Tuition Fees,Education
+Exam Registration Fee,Education
+Crossword Bookstore,Education
+Sapna Book House,Education
+Kindle Books,Education
+Duolingo,Education
+Scaler Academy,Education
+Amazon,Shopping
+Flipkart,Shopping
+Myntra,Shopping
+Ajio,Shopping
+Meesho,Shopping
+Nykaa,Shopping
+Decathlon,Shopping
+Croma,Shopping
+Reliance Digital,Shopping
+Vijay Sales,Shopping
+IKEA,Shopping
+Pepperfry,Shopping
+Urban Ladder,Shopping
+Lifestyle Stores,Shopping
+Shoppers Stop,Shopping
+Westside,Shopping
+Pantaloons,Shopping
+Max Fashion,Shopping
+Zara,Shopping
+H and M,Shopping
+Tata Cliq,Shopping
+FirstCry,Shopping
+Bata Shoes,Shopping
+Titan Watches,Shopping
+Tanishq Jewellers,Shopping
+Apple Store,Shopping
+Samsung Store,Shopping
+BookMyShow,Entertainment
+PVR Cinemas,Entertainment
+INOX Movies,Entertainment
+Cinepolis,Entertainment
+Steam Games,Entertainment
+PlayStation Store,Entertainment
+Xbox Live,Entertainment
+Wonderla,Entertainment
+Smaaash,Entertainment
+Timezone Gaming,Entertainment
+Paytm Insider Events,Entertainment
+Comedy Club Tickets,Entertainment
+Bowling Alley,Entertainment
+Imagicaa,Entertainment
+Dream11,Entertainment
+Netflix,Subscriptions
+Spotify,Subscriptions
+Amazon Prime,Subscriptions
+Disney Hotstar,Subscriptions
+YouTube Premium,Subscriptions
+Apple iCloud,Subscriptions
+Google One,Subscriptions
+SonyLIV,Subscriptions
+ZEE5,Subscriptions
+JioCinema Premium,Subscriptions
+Cult Fit Membership,Subscriptions
+Golds Gym,Subscriptions
+Anytime Fitness,Subscriptions
+LinkedIn Premium,Subscriptions
+Microsoft 365,Subscriptions
+Canva Pro,Subscriptions
+Audible,Subscriptions
+Gaana Plus,Subscriptions
+ChatGPT Plus,Subscriptions
+MakeMyTrip,Travel
+Goibibo,Travel
+Cleartrip,Travel
+Yatra,Travel
+EaseMyTrip,Travel
+IRCTC,Travel
+IndiGo Airlines,Travel
+Air India,Travel
+Vistara,Travel
+SpiceJet,Travel
+Akasa Air,Travel
+Taj Hotels,Travel
+OYO Rooms,Travel
+Airbnb,Travel
+Treebo Hotels,Travel
+FabHotels,Travel
+Marriott Hotel,Travel
+redBus,Travel
+Zoomcar,Travel
+Thomas Cook,Travel
+Club Mahindra,Travel
+Urban Company Salon,Personal Care
+Naturals Salon,Personal Care
+Lakme Salon,Personal Care
+Green Trends,Personal Care
+Jawed Habib,Personal Care
+Toni and Guy,Personal Care
+Bodycraft Spa,Personal Care
+O2 Spa,Personal Care
+Barber Shop,Personal Care
+Beauty Parlour,Personal Care
+Enrich Salon,Personal Care
+Mamaearth,Personal Care
+The Body Shop,Personal Care
+Zerodha Coin,Investment
+Groww,Investment
+Upstox,Investment
+Kuvera,Investment
+Paytm Money,Investment
+ET Money,Investment
+Axis Mutual Fund SIP,Investment
+HDFC Mutual Fund,Investment
+SBI Mutual Fund,Investment
+ICICI Prudential MF,Investment
+Nippon India MF,Investment
+Parag Parikh Flexi Cap,Investment
+PPF Deposit,Investment
+NPS Contribution,Investment
+Recurring Deposit,Investment
+Fixed Deposit Booking,Investment
+Sovereign Gold Bond,Investment
+Smallcase,Investment
+Angel One,Investment
+HDFC Home Loan EMI,EMI/Debt
+SBI Car Loan EMI,EMI/Debt
+ICICI Personal Loan,EMI/Debt
+Bajaj Finserv EMI,EMI/Debt
+Axis Bank Loan,EMI/Debt
+Credit Card Bill Payment,EMI/Debt
+HDFC Credit Card,EMI/Debt
+SBI Card Payment,EMI/Debt
+Kotak Loan Repayment,EMI/Debt
+Tata Capital EMI,EMI/Debt
+Home Credit EMI,EMI/Debt
+ZestMoney,EMI/Debt
+Simpl Pay Later,EMI/Debt
+LazyPay,EMI/Debt
+Education Loan Repayment,EMI/Debt
+Transfer to Parents,Family Support
+Money to Mom,Family Support
+Sent to Father,Family Support
+Family Maintenance,Family Support
+Support to Brother,Family Support
+Sister Tuition Help,Family Support
+Grandparents Medical Help,Family Support
+Home Expenses Transfer,Family Support
+Sri Venkateshwara Provisions,Groceries
+Krishna Fruits and Vegetables,Groceries
+Laxmi Super Market,Groceries
+Om Sai Kirana,Groceries
+Patel Grocery Mart,Groceries
+Daily Needs Supermarket,Groceries
+Green Valley Fresh Mart,Groceries
+Sharma Sweets,Food & Dining
+Agarwal Bhojanalaya,Food & Dining
+Annapoorna Mess,Food & Dining
+Chai Point,Food & Dining
+Tea Stall,Food & Dining
+Royal Biryani House,Food & Dining
+Kamat Hotel Veg Restaurant,Food & Dining
+Shree Sagar Tiffins,Food & Dining
+Food Court Phoenix Mall,Food & Dining
+Om Sai Medicals,Healthcare
+Sri Lakshmi Medical Stores,Healthcare
+Jan Aushadhi Kendra,Healthcare
+City Chemist,Healthcare
+Life Care Diagnostics,Healthcare
+Sunrise Multispeciality Hospital,Healthcare
+Smile Dental Care,Healthcare
+Vision Eye Clinic,Healthcare
+Balaji Fuel Station,Transport
+City Auto Stand,Transport
+Shree Travels Cab,Transport
+Highway Toll Plaza,Transport
+Ganesh Tours and Travels,Travel
+Sea View Resort,Travel
+Hill Top Homestay,Travel
+Grand Residency Hotel,Travel
+Kaveri Electricals Bill,Utilities
+Municipal Water Supply,Utilities
+Glamour Unisex Salon,Personal Care
+Royal Gents Parlour,Personal Care
+Lotus Ladies Beauty Parlour,Personal Care
+Fashion Point Garments,Shopping
+Sri Ram Textiles,Shopping
+Mobile World Electronics,Shopping
+Raymond Showroom,Shopping
+Footwear Corner,Shopping
+New Gen Coaching Classes,Education
+Bright Future Tuition Centre,Education
+Saraswati Book Depot,Education
+Fun City Gaming Zone,Entertainment
+Galaxy Cinema Hall,Entertainment
+Fitness First Gym,Subscriptions
+Power House Gym Membership,Subscriptions

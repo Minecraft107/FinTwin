@@ -94,7 +94,7 @@ def test_recalculation_failure_does_not_fail_the_write(api, monkeypatch):
     def boom(*_args, **_kwargs):
         raise RuntimeError("model crashed")
 
-    monkeypatch.setattr(service, "refresh_snapshots", boom)
+    monkeypatch.setattr(service, "recalculate", boom)
     _add(api, _month(1), 500)
     assert api.get("/api/transactions").get_json()["meta"]["total"] == 1
 

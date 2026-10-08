@@ -23,12 +23,34 @@ def create_app(config: type[Config] | None = None) -> Flask:
 
     from app import models  # noqa: F401  (registers every table on db.metadata)
     from app.cli import register_cli
-    from app.routes import analytics, auth, health, holdings, profile, system, transactions, twin
+    from app.routes import (
+        analytics,
+        auth,
+        forecast,
+        health,
+        holdings,
+        profile,
+        risks,
+        system,
+        transactions,
+        twin,
+    )
     from app.utils.auth import register_jwt_handlers
 
     register_error_handlers(app)
     register_jwt_handlers(app)
-    for module in (system, auth, profile, transactions, holdings, twin, analytics, health):
+    for module in (
+        system,
+        auth,
+        profile,
+        transactions,
+        holdings,
+        twin,
+        analytics,
+        health,
+        forecast,
+        risks,
+    ):
         app.register_blueprint(module.bp, url_prefix=f"/api{module.bp.url_prefix or ''}")
     register_cli(app)
     return app

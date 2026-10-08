@@ -1,0 +1,111 @@
+{
+  "generated_at": "2026-10-08T13:35:21+00:00",
+  "category_level": {
+    "naive": {
+      "mae": 1369.28,
+      "rmse": 3872.14,
+      "r2": 0.7261,
+      "n": 2700
+    },
+    "moving_average": {
+      "mae": 1203.11,
+      "rmse": 2819.51,
+      "r2": 0.8548,
+      "n": 2700
+    },
+    "seasonal_naive": {
+      "mae": 890.31,
+      "rmse": 2711.33,
+      "r2": 0.8657,
+      "n": 2700
+    },
+    "holt": {
+      "mae": 1100.98,
+      "rmse": 2526.53,
+      "r2": 0.8834,
+      "n": 2700
+    },
+    "xgboost": {
+      "mae": 699.46,
+      "rmse": 2149.61,
+      "r2": 0.9156,
+      "n": 2700
+    },
+    "per_user_selection": {
+      "mae": 740.24,
+      "rmse": 2351.12,
+      "r2": 0.899,
+      "n": 2700
+    }
+  },
+  "total_level": {
+    "naive": {
+      "mae": 11674.21,
+      "rmse": 15363.62,
+      "r2": 0.5366,
+      "n": 180
+    },
+    "moving_average": {
+      "mae": 8544.12,
+      "rmse": 11053.75,
+      "r2": 0.7601,
+      "n": 180
+    },
+    "seasonal_naive": {
+      "mae": 6975.06,
+      "rmse": 10482.52,
+      "r2": 0.7843,
+      "n": 180
+    },
+    "holt": {
+      "mae": 7972.77,
+      "rmse": 10329.88,
+      "r2": 0.7905,
+      "n": 180
+    },
+    "xgboost": {
+      "mae": 5312.34,
+      "rmse": 8082.27,
+      "r2": 0.8718,
+      "n": 180
+    },
+    "per_user_selection": {
+      "mae": 5499.85,
+      "rmse": 8432.39,
+      "r2": 0.8604,
+      "n": 180
+    }
+  },
+  "selection_frequency": {
+    "xgboost": 158,
+    "seasonal_naive": 16,
+    "moving_average": 3,
+    "naive": 3
+  },
+  "protocol": "240 train users / 60 held-out users; final 3 months held out; one-step-ahead predictions",
+  "xgb_params": {
+    "objective": "reg:absoluteerror",
+    "n_estimators": 400,
+    "max_depth": 4,
+    "learning_rate": 0.05,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8,
+    "min_child_weight": 5,
+    "random_state": 0,
+    "n_jobs": -1
+  },
+  "feature_importance": {
+    "lag1": 0.1382,
+    "lag2": 0.1194,
+    "lag3": 0.0845,
+    "lag6": 0.0315,
+    "lag12": 0.0388,
+    "mean3": 0.2726,
+    "mean6": 0.0031,
+    "std3": 0.2554,
+    "month_sin": 0.0085,
+    "month_cos": 0.0073,
+    "festive": 0.0028,
+    "category": 0.038
+  }
+}

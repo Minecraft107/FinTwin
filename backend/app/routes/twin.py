@@ -2,8 +2,9 @@ from datetime import date
 
 from flask import Blueprint, request
 
-from app.services.digital_twin.service import current_twin, monthly_history
-from app.services.financial.health_score import score_twin
+from app.repositories.user_data import load_user_data
+from app.services.digital_twin.builder import build_twin
+from app.services.digital_twin.service import anomaly_flags, monthly_history, scored
 from app.utils.auth import current_user_id, protect
 from app.utils.http import ApiError, ok
 
@@ -19,8 +20,9 @@ def get_twin():
         raise ApiError(400, "VALIDATION_ERROR", "'as_of' must be YYYY-MM-DD.") from None
     if as_of and as_of > date.today():
         raise ApiError(400, "VALIDATION_ERROR", "'as_of' cannot be in the future.")
-    twin = current_twin(current_user_id(), as_of)
-    health = score_twin(twin)
+    data = load_user_data(current_user_id())
+    twin = build_twin(data, as_of)
+    health = scored(twin, anomaly_flags(data))
     payload = twin.to_dict()
     payload["health_score"] = {
         "score": None if health.score is None else round(health.score, 1),
