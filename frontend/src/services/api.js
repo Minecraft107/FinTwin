@@ -1,6 +1,7 @@
 // Thin fetch wrapper: adds the JWT, unwraps the backend {data, meta} envelope and turns
 // {error: {code, message, details}} responses into ApiError.
-const BASE_URL = import.meta.env.VITE_API_URL ?? '/api'
+// '/api' (same origin: Vite proxy / nginx), or the API's full URL when hosted separately.
+export const BASE_URL = import.meta.env.VITE_API_URL ?? '/api'
 const TOKEN_KEY = 'fintwin.token'
 const UNREACHABLE = 'Cannot reach the FinTwin server. Check that the backend is running, then try again.'
 

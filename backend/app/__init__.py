@@ -19,7 +19,8 @@ def create_app(config: type[Config] | None = None) -> Flask:
     db.init_app(app)
     migrate.init_app(app, db, directory=app.config["MIGRATIONS_DIR"], render_as_batch=True)
     jwt.init_app(app)
-    cors.init_app(app, resources={r"/api/*": {"origins": app.config["FRONTEND_ORIGIN"]}})
+    origins = [o.strip() for o in app.config["FRONTEND_ORIGIN"].split(",") if o.strip()]
+    cors.init_app(app, resources={r"/api/*": {"origins": origins}})
 
     from app import models  # noqa: F401  (registers every table on db.metadata)
     from app.cli import register_cli

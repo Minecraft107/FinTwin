@@ -277,7 +277,22 @@ The compose stack is production-shaped: PostgreSQL 16 with a volume, Flask on gu
 4. Put TLS in front of nginx (a load balancer, or Caddy / Traefik with Let's Encrypt).
 5. Back up the `pgdata` volume (`pg_dump`).
 
-**Options:**
+**Free hosted setup (used for the live demo): Vercel + Render + Neon**
+
+| Part | Host | Config in this repo |
+|---|---|---|
+| React frontend | Vercel (CDN, always on) | `frontend/vercel.json` (SPA routes) |
+| Flask API + ML (Docker image) | Render free web service | `render.yaml` (blueprint) |
+| PostgreSQL | Neon free tier | — |
+
+1. **Neon:** create a project (Singapore region) and copy its connection string. A `postgresql://` URL is fine; the app switches it to the psycopg 3 driver.
+2. **Render:** New → Blueprint → this repository. Paste the Neon string as `DATABASE_URL`, and put a placeholder in `FRONTEND_ORIGIN` for now. The first build takes 5–8 minutes (it trains the models). Check `https://<service>.onrender.com/api/health` → `"database": "up"`.
+3. **Vercel:** New Project → this repository, with **Root Directory** `frontend` (Vite is detected). Add the environment variable `VITE_API_URL=https://<service>.onrender.com/api`, then deploy.
+4. **Render:** set `FRONTEND_ORIGIN` to the Vercel URL (comma-separate several, e.g. a custom domain) and save. CORS then allows the frontend.
+
+Render's free instance sleeps after 15 idle minutes; the first request afterwards takes about a minute. Open the site a few minutes before a demo.
+
+**Other options:**
 - **Single VM** (e.g. AWS EC2, Azure VM, DigitalOcean): install Docker, run `docker compose up -d --build`.
 - **Managed services:** a managed PostgreSQL (RDS, Azure Database, Neon, Supabase), the backend image on Render / Railway / Cloud Run / Azure Container Apps with `DATABASE_URL` set, and the frontend `dist/` on any static host with `/api` routed to the backend.
 

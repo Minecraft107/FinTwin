@@ -4,7 +4,7 @@ import {
   Button, Card, EmptyState, ErrorState, Field, Input, Loading, Modal, PageHeader, Select, StatusBadge,
 } from '../components/ui'
 import { useApi } from '../hooks/useApi'
-import { api, errorText, request, tokenStore } from '../services/api'
+import { api, BASE_URL, errorText, request, tokenStore } from '../services/api'
 import { dateLabel, inr, today } from '../utils/format'
 
 const PER_PAGE = 25
@@ -84,7 +84,7 @@ const ROW_TONE = { ok: 'good', warning: 'warning', duplicate: 'info', error: 'cr
 
 // The sample needs the auth header, so it is fetched and handed to the browser as a file.
 async function downloadSample() {
-  const res = await fetch('/api/transactions/import/sample', { headers: { Authorization: `Bearer ${tokenStore.get()}` } })
+  const res = await fetch(`${BASE_URL}/transactions/import/sample`, { headers: { Authorization: `Bearer ${tokenStore.get()}` } })
   const url = URL.createObjectURL(await res.blob())
   const a = Object.assign(document.createElement('a'), { href: url, download: 'fintwin-sample-statement.csv' })
   a.click()

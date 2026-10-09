@@ -1,0 +1,28 @@
+# Render blueprint for the FinTwin API (Render dashboard → New → Blueprint → this repository).
+# The frontend is deployed on Vercel and the database on Neon; steps in README §22.
+services:
+  - type: web
+    name: fintwin-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .
+    plan: free
+    region: singapore
+    healthCheckPath: /api/health
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL # Neon connection string (Dashboard → Connect), pasted at setup
+        sync: false
+      - key: FRONTEND_ORIGIN # the Vercel URL, e.g. https://fintwin.vercel.app (comma-separate several)
+        sync: false
+      - key: DEMO_LOGIN_ENABLED # one-click demo for the viva; set to false to hide it
+        value: "true"
+      - key: DEMO_PASSWORD # nobody needs it: the demo is opened with the one-click button
+        generateValue: true
+      - key: GUNICORN_WORKERS # the free instance has 512 MB of memory
+        value: "1"
+      - key: LLM_PROVIDER # openai / gemini also need OPENAI_API_KEY / GEMINI_API_KEY
+        value: local
