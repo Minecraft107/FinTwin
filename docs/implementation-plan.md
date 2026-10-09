@@ -355,3 +355,20 @@ Full description: [simulation.md](simulation.md).
   - Any `/auth/me` failure, including a server restart, logged the user out. Now only a 401 does.
   - Reserved `.test` email domains are rejected by the validator (it's the documented behaviour; walkthrough uses example.com).
 - **Checks:** 470 backend tests pass (+9). ruff is clean. oxlint has 0 errors (the same 2 accepted warnings). The build succeeds.
+
+### Phase 13: Testing hardening ✅ (2026-10-09)
+- **Coverage:** 98% of `app/` overall; every `services/` module ≥ 87% (target ≥ 80%). Run with `pytest --cov=app`.
+- **New sweeps:**
+  - `tests/test_robustness.py`: every API route (56) is called with an empty account, the seeded demo account, junk query parameters and 8 junk bodies. No route may return a 5xx, every response must use the envelope, and every route except the open ones must require a token.
+  - `tests/test_calendar_edges.py`: the full pipeline (twin, score, forecasts, a 60-month 3-change simulation, goal plans, risks, snapshots) on 29 Feb, 1 Jan, 31 Jan, 31 Mar, 31 Dec and 28 Feb, with strict JSON (no NaN/Infinity).
+  - A manual extreme-value probe: an account at the schema limits (₹1e11, −100% returns, 0% and 100% loans, 600-month tenures, overdue goals). There were no errors and no non-finite JSON.
+  - Frontend: `npm test` runs `src/**/*.test.js` with Node's built-in runner (no new dependency). It covers the ₹ formatting, compact units, labels and the local date.
+- **Problems found and fixed (CSV importer, the input most exposed to real-world mess):**
+  - A literal `nan`/`inf` amount produced `NaN` in the preview JSON, which browsers reject, so the whole preview failed. These are now row errors.
+  - Statements with `0.00` or `-` in the unused debit/credit column had every row rejected as "both filled".
+  - Amounts above the cap passed preview and then failed the all-or-nothing commit. They are now row errors in the preview.
+  - Now accepted: account-info lines above the header, `;` / tab / `|` delimiters, `Cr`/`Dr` suffixes, dates with a time part, and `DD-MM-YY` / `DD-Mon-YY` / `DD.MM.YYYY` dates.
+  - Row numbers now match the file line when there is a preamble.
+- **Problem found and fixed (frontend):** `today()` used the UTC date, so in India between 00:00 and 05:30 the transaction form defaulted to yesterday and capped the date picker at yesterday.
+- **Known, by design:** `as_of` means the end of that day, so on a month's last day that month counts as complete.
+- **Checks:** 499 backend tests pass (+29). ruff is clean. 5 frontend tests pass. oxlint has 0 errors (the same 2 accepted warnings). The build succeeds.

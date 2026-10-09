@@ -47,6 +47,12 @@ def _preview(text: str, existing: set | None = None) -> dict:
         ("01/09/2026", date(2026, 9, 1)),  # Indian day-first
         ("01-09-2026", date(2026, 9, 1)),
         ("01-Sep-2026", date(2026, 9, 1)),
+        ("01.09.2026", date(2026, 9, 1)),
+        ("01-09-26", date(2026, 9, 1)),
+        ("01-Sep-26", date(2026, 9, 1)),
+        ("2026-09-01 10:22:00", date(2026, 9, 1)),  # time part ignored
+        ("2026-09-01T10:22:00", date(2026, 9, 1)),
+        ("01/09/2026 10:22", date(2026, 9, 1)),
         ("2026/13/45", None),
     ],
 )
@@ -56,7 +62,18 @@ def test_parse_date(raw, expected):
 
 @pytest.mark.parametrize(
     "raw,expected",
-    [("1,30,000", 130000), ("₹ 2,500.50", 2500.5), ("-450", -450), ("(300)", -300), ("abc", None)],
+    [
+        ("1,30,000", 130000),
+        ("₹ 2,500.50", 2500.5),
+        ("-450", -450),
+        ("(300)", -300),
+        ("abc", None),
+        ("1,250.00 Dr", -1250),
+        ("50,000.00 CR", 50000),
+        ("nan", None),  # would put NaN into the JSON response
+        ("inf", None),
+        ("1e400", None),
+    ],
 )
 def test_parse_amount(raw, expected):
     assert parse_amount(raw) == expected
@@ -110,6 +127,24 @@ def test_bank_debit_credit_format_with_aliases():
     assert first["category_name"] == "Transport"
     assert second["transaction"]["type"] == "income" and second["category_name"] == "Salary"
     assert third["status"] == "error"
+
+
+def test_real_bank_export_quirks():
+    """Account info above the header, ';' delimiter, 0.00 / '-' in the unused column."""
+    out = _preview(
+        "Account Number;0012345678\n"
+        "Statement From;01/09/2026 To 30/09/2026\n"
+        "\n"
+        "Txn Date;Narration;Withdrawal Amt;Deposit Amt;Balance\n"
+        "05/09/2026;UPI/9921/UBER TRIP;1,250.00;0.00;48,750.00\n"
+        "06/09/2026;NEFT SAL ACME;-;95,000.00;1,43,750.00\n"
+        "07/09/2026;HUGE;200000000000;0.00;0\n"
+    )
+    first, second, third = out["rows"]
+    assert first["row"] == 5 and first["transaction"]["amount"] == 1250
+    assert first["transaction"]["type"] == "expense"
+    assert second["transaction"]["type"] == "income" and second["transaction"]["amount"] == 95000
+    assert third["errors"] == ["Amount is too large."]  # caught here, not at commit
 
 
 def test_type_inferred_from_sign_is_flagged():

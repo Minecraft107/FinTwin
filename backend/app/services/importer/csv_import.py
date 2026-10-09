@@ -6,18 +6,25 @@ the user confirms rows in the UI and they are committed by a separate endpoint.
 Accepted columns (case-insensitive, common bank aliases mapped):
   date, description, amount, type, category, merchant, payment_method, is_recurring
   or bank style: date, description, debit, credit
+Real bank exports are tolerated: account-info lines above the header, `;` / tab / `|`
+delimiters, `0.00` or `-` in the unused debit/credit column, `Cr`/`Dr` amount suffixes and
+dates with a time part. Dates are read day-first (Indian format).
 """
 
 import csv
 import io
+import math
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date, datetime
 
 from app.models.enums import CategoryKind, PaymentMethod, TransactionType
+from app.schemas.transactions import MAX_AMOUNT
 from app.services.ml.categorizer import Categorization
 
 MAX_ROWS = 5000
+HEADER_SEARCH_LINES = 30
+DELIMITERS = (",", ";", "\t", "|")
 
 HEADER_ALIASES = {
     "narration": "description",
@@ -35,7 +42,8 @@ HEADER_ALIASES = {
     "recurring": "is_recurring",
 }
 
-DATE_FORMATS = ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%d/%m/%y", "%d-%b-%Y", "%d %b %Y", "%Y/%m/%d")
+DATE_FORMATS = ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%d.%m.%Y", "%d/%m/%y", "%d-%m-%y",
+                "%d-%b-%Y", "%d-%b-%y", "%d %b %Y", "%d %b %y", "%Y/%m/%d")  # fmt: skip
 
 TYPE_ALIASES = {
     "income": TransactionType.INCOME,
@@ -77,35 +85,60 @@ class PreviewRow:
 
 def parse_date(raw: str) -> date | None:
     raw = raw.strip()
-    for fmt in DATE_FORMATS:
-        try:
-            return datetime.strptime(raw, fmt).date()
-        except ValueError:
-            continue
+    # A time part ("2026-01-05 10:22", "2026-01-05T10:22:00") is ignored.
+    for candidate in (raw, raw.replace("T", " ").split(" ")[0]):
+        for fmt in DATE_FORMATS:
+            try:
+                return datetime.strptime(candidate, fmt).date()
+            except ValueError:
+                continue
     return None
 
 
 def parse_amount(raw: str) -> float | None:
+    """'₹1,23,456.50', '(500)' and '500 Dr' are negative-aware; NaN / infinity are rejected."""
     s = raw.strip().lower()
     for token in ("₹", "inr", "rs.", "rs", ",", " "):
         s = s.replace(token, "")
-    negative = s.startswith("(") and s.endswith(")")
-    s = s.strip("()")
+    negative = (s.startswith("(") and s.endswith(")")) or s.endswith("dr")
+    s = s.strip("()").removesuffix("dr").removesuffix("cr")
     try:
         value = float(s)
     except ValueError:
         return None
+    if not math.isfinite(value):
+        return None
     return -value if negative else value
 
 
-def _read_rows(content: bytes) -> tuple[list[str], list[dict[str, str]]]:
+def _blank(value: str) -> bool:
+    """Banks fill the unused debit/credit column with '', '-', or 0.00."""
+    return value.strip(" -–") == "" or parse_amount(value) == 0
+
+
+def _find_header(lines: list[str]) -> tuple[int, str]:
+    """(line index, delimiter) of the header row; statements often start with account info."""
+    for i, line in enumerate(lines[:HEADER_SEARCH_LINES]):
+        for delimiter in DELIMITERS:
+            if delimiter not in line:
+                continue
+            names = next(csv.reader([line], delimiter=delimiter))
+            columns = {HEADER_ALIASES.get(n.strip().lower(), n.strip().lower()) for n in names}
+            if {"date", "description"} <= columns and columns & {"amount", "debit", "credit"}:
+                return i, delimiter
+    return 0, ","
+
+
+def _read_rows(content: bytes) -> tuple[list[str], list[dict[str, str]], int]:
     try:
         text = content.decode("utf-8-sig")
     except UnicodeDecodeError:
         text = content.decode("latin-1")
     if not text.strip():
         raise CsvFormatError("The file is empty.")
-    reader = csv.DictReader(io.StringIO(text))
+    lines = text.splitlines(keepends=True)
+    start, delimiter = _find_header(lines)
+    reader = csv.DictReader(io.StringIO("".join(lines[start:])), delimiter=delimiter)
     if not reader.fieldnames:
         raise CsvFormatError("The file has no header row.")
     mapping = {}
@@ -128,7 +161,7 @@ def _read_rows(content: bytes) -> tuple[list[str], list[dict[str, str]]]:
             raise CsvFormatError(f"Too many rows (max {MAX_ROWS}).")
     if not rows:
         raise CsvFormatError("The file has a header but no data rows.")
-    return columns, rows
+    return columns, rows, start
 
 
 def _amount_and_type(
@@ -136,6 +169,7 @@ def _amount_and_type(
 ) -> tuple[float | None, TransactionType | None]:
     if "debit" in columns or "credit" in columns:
         debit, credit = data.get("debit", ""), data.get("credit", "")
+        debit, credit = ("" if _blank(debit) else debit), ("" if _blank(credit) else credit)
         if debit and credit:
             out.errors.append("Both debit and credit are filled.")
             return None, None
@@ -177,13 +211,13 @@ def preview_csv(
     today: date | None = None,
 ) -> dict:
     today = today or date.today()
-    columns, rows = _read_rows(content)
+    columns, rows, header_index = _read_rows(content)
     by_name = {c.name.lower(): c for c in categories}
     seen: set = set()
     results: list[PreviewRow] = []
 
     for index, data in enumerate(rows):
-        out = PreviewRow(row=index + 2)
+        out = PreviewRow(row=header_index + index + 2)  # file line number
         results.append(out)
 
         raw_date = data.get("date", "")
@@ -203,6 +237,8 @@ def preview_csv(
         amount, txn_type = _amount_and_type(data, columns, out)
         if amount == 0:
             out.errors.append("Amount cannot be zero.")
+        elif amount is not None and amount > MAX_AMOUNT:
+            out.errors.append("Amount is too large.")
 
         if out.errors:
             out.status = "error"

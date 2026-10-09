@@ -25,7 +25,9 @@ const dateFmt = new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short
 export const monthLabel = (iso) => (iso ? monthFmt.format(new Date(`${iso.slice(0, 7)}-01T00:00:00`)) : '')
 export const dateLabel = (iso) => (iso ? dateFmt.format(new Date(`${iso.slice(0, 10)}T00:00:00`)) : '')
 
-export const today = () => new Date().toISOString().slice(0, 10)
+// Local date, not UTC: toISOString() gives yesterday in India between 00:00 and 05:30.
+export const today = (now = new Date()) =>
+  `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 
 export const titleCase = (s) => (s ? s.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase()) : '')
 

@@ -81,6 +81,7 @@ Production build: `npm run build` produces `frontend/dist/` (served by nginx in 
 | Backend tests + coverage | `backend/`: `pytest --cov=app` |
 | Backend lint / format | `backend/`: `ruff check .` and `ruff format --check .` |
 | Frontend lint | `frontend/`: `npm run lint` |
+| Frontend unit tests | `frontend/`: `npm test` (Node's built-in runner) |
 | Frontend production build | `frontend/`: `npm run build` |
 
 Backend tests use an in-memory SQLite database, so they need neither Docker nor Postgres.

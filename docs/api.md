@@ -109,7 +109,9 @@ Accepted columns (case-insensitive):
 - **Bank style:** `date, description, debit, credit`
 - **Aliases:** `Narration/Particulars/Details/Remarks → description`, `Txn Date/Transaction Date → date`, `Withdrawal Amt → debit`, `Deposit Amt → credit`
 
-Date formats: `YYYY-MM-DD`, `DD/MM/YYYY`, `DD-MM-YYYY`, `DD/MM/YY`, `DD-Mon-YYYY`, `DD Mon YYYY` (Indian day-first). Amounts may contain `₹`, `Rs`, Indian digit grouping (`1,30,000`) or `(300)` for negatives. Without a `type` column, a negative amount is an expense and a positive one is income; this inference is flagged as a warning.
+Date formats: `YYYY-MM-DD`, `DD/MM/YYYY`, `DD-MM-YYYY`, `DD.MM.YYYY`, `DD/MM/YY`, `DD-MM-YY`, `DD-Mon-YYYY`, `DD-Mon-YY`, `DD Mon YYYY` (Indian day-first); a time part is ignored. Amounts may contain `₹`, `Rs`, Indian digit grouping (`1,30,000`), `(300)` or a `Dr` suffix for negatives, and a `Cr` suffix; `nan`/`inf` and amounts above ₹1e11 are row errors.
+
+Real bank exports are tolerated: up to 30 lines of account information above the header, `;` / tab / `|` delimiters, and `0.00` or `-` in the unused debit/credit column. `row` is the line number in the file. Without a `type` column, a negative amount is an expense and a positive one is income; this inference is flagged as a warning.
 
 ```json
 { "summary": { "total": 17, "ok": 14, "warning": 0, "duplicate": 1, "error": 2, "importable": 14 },
