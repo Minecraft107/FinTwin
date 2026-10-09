@@ -1,5 +1,12 @@
 # Local development setup
 
+## Quick start: everything in Docker
+```bash
+docker compose up --build
+```
+This starts PostgreSQL, the Flask API (migrations, demo seed and model training happen automatically) and nginx serving the React build. Open **http://localhost:8080** and use **Log in → Explore the demo account**. No `.env` is needed; if one exists, its values are used. If port 5432 or 8080 is taken, set `POSTGRES_PORT` / `WEB_PORT` in `.env`. To stop, run `docker compose down`; add `-v` to also delete the database volume.
+
+## Local development
 Prerequisites: **Python 3.11**, **Node 20+**, **Docker Desktop** (for PostgreSQL).
 
 ## 1. Environment file
@@ -72,7 +79,7 @@ To try the import as a new user: **Transactions → Import CSV → Download a sa
 flask sample-csv --out sample_statement.csv
 ```
 
-Production build: `npm run build` produces `frontend/dist/` (served by nginx in Phase 14).
+Production build: `npm run build` produces `frontend/dist/` (served by nginx in the Docker image).
 
 ## 5. Quality checks
 | What | Command (run inside the folder) |

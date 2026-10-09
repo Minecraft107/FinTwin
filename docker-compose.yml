@@ -1,3 +1,5 @@
+# One-command startup:  docker compose up --build   ->  http://localhost:8080
+# Works without a .env file; values in .env (see .env.example) override the defaults below.
 services:
   db:
     image: postgres:16-alpine
@@ -16,7 +18,31 @@ services:
       timeout: 3s
       retries: 10
 
-  # backend and frontend services are added in Phase 14
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      args:
+        TRAIN_MODELS: ${TRAIN_MODELS:-true}
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-fintwin}:${POSTGRES_PASSWORD:-fintwin}@db:5432/${POSTGRES_DB:-fintwin}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
 
 volumes:
   pgdata:

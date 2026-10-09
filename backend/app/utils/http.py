@@ -34,6 +34,9 @@ def error_response(status: int, code: str, message: str, details: Any = None):
     return jsonify({"error": {"code": code, "message": message, "details": details or {}}}), status
 
 
+TOO_LARGE = "The file is too large (max 2 MB)."  # MAX_CONTENT_LENGTH; nginx says the same
+
+
 def register_error_handlers(app: Flask) -> None:
     @app.errorhandler(ApiError)
     def _api_error(e: ApiError):
@@ -62,7 +65,8 @@ def register_error_handlers(app: Flask) -> None:
     def _http_error(e: HTTPException):
         db.session.rollback()
         code = (e.name or "HTTP_ERROR").upper().replace(" ", "_")
-        return error_response(e.code or 500, code, e.description or e.name)
+        message = TOO_LARGE if e.code == 413 else e.description or e.name
+        return error_response(e.code or 500, code, message)
 
     @app.errorhandler(Exception)
     def _unhandled(e: Exception):

@@ -6,6 +6,8 @@ This document covers what each model does, how it was trained and evaluated, the
 flask ml train            # from backend/  (≈ 90 s on a laptop)
 python -m ml.pipeline     # same, from the repository root
 ```
+Docker images run the same pipeline at build time. XGBoost results differ by about 1–2% between operating systems, because multithreaded histogram building sums floats in a different order (a Linux build gave MAE ₹5,387 against ₹5,312 below); the categorizer and anomaly metrics reproduce exactly. The committed metrics come from a Windows run.
+
 Training is separate from inference. `ml/` builds the data, trains, evaluates and saves artifacts to `ml/models/`. The backend only loads those artifacts (`app/services/ml/artifacts.py`). If an artifact is missing or corrupt, every feature falls back to a non-ML method, and `GET /api/ml/status` shows which artifacts are loaded.
 
 Feature engineering lives once, in `backend/app/services/ml/features.py`, and the training code imports it. So training and serving cannot drift apart.

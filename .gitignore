@@ -15,7 +15,7 @@ htmlcov/
 node_modules/
 dist/
 
-# ML artifacts are rebuilt by `flask ml train-all`; metrics are kept
+# ML artifacts are rebuilt by `flask ml train`; metrics are kept
 ml/models/*.joblib
 ml/models/*.json
 ml/datasets/generated/

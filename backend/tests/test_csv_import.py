@@ -265,6 +265,7 @@ def test_upload_over_size_limit_rejected(api):
     res = _upload(api, "date,description,amount\n" + "2026-09-01,X,1\n" * 200_000)  # ~3 MB
     assert res.status_code == 413
     assert res.get_json()["error"]["code"] == "REQUEST_ENTITY_TOO_LARGE"
+    assert res.get_json()["error"]["message"] == "The file is too large (max 2 MB)."
 
 
 def test_generated_sample_statement_imports_cleanly(api):

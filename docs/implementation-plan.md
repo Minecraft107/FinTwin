@@ -372,3 +372,32 @@ Full description: [simulation.md](simulation.md).
 - **Problem found and fixed (frontend):** `today()` used the UTC date, so in India between 00:00 and 05:30 the transaction form defaulted to yesterday and capped the date picker at yesterday.
 - **Known, by design:** `as_of` means the end of that day, so on a month's last day that month counts as complete.
 - **Checks:** 499 backend tests pass (+29). ruff is clean. 5 frontend tests pass. oxlint has 0 errors (the same 2 accepted warnings). The build succeeds.
+
+### Phase 14: Docker, documentation, deployment ✅ (2026-10-09)
+- **Containers:**
+  - `backend/Dockerfile`: python 3.11-slim, models trained into the image at build time (`TRAIN_MODELS`), non-root user, healthcheck. `docker-entrypoint.sh` runs `flask db upgrade` → `flask seed` (idempotent, `SEED_DEMO`) → gunicorn.
+  - `frontend/Dockerfile`: a Node build, then nginx. `frontend/nginx.conf` serves the SPA with deep-link fallback and immutable hashed assets, and proxies `/api` with a 3 MB body limit; an oversize upload gets the API's JSON error, not an HTML page.
+  - `docker-compose.yml`: db + backend + frontend with health-gated start-up. `.env` is optional; `WEB_PORT` / `POSTGRES_PORT` are configurable.
+- **Verified:**
+  - A clean copy of the repository (only the files git would commit, no `.env`, no trained models), built with `--no-cache`, then `docker compose up`:
+    - Alembic migrated **real PostgreSQL 16**, closing the item open since Phases 2–3.
+    - Categories and the demo user were seeded.
+    - Models were trained in the image (101 s), and `/api/ml/status` shows both loaded.
+    - The dashboard returns a score, alerts, goals and an XGBoost forecast; SPA deep links return 200.
+  - A restart does not re-seed.
+  - On the dev stack:
+    - Browser: demo login, the dashboard, and a coach answer through nginx with no console errors.
+    - The CSV sample was downloaded, previewed and imported.
+    - Both upload size-limit paths (nginx and Flask) return JSON.
+- **Docs:**
+  - `README.md` has all 24 required sections.
+  - `docs/viva.md` answers the 17 viva questions, plus a 5-minute demo script.
+  - The deployment checklist and options are in README §22.
+  - `setup.md` has a Docker quick start; `ml.md` notes cross-platform XGBoost variance.
+  - Stale statements in `architecture.md` were corrected (React 19, urllib, in-memory RAG index, `flask ml train`, the ML folder layout, CSV parsing).
+- **Problems found and fixed:**
+  - nginx's 1 MB default body limit would have rejected valid 1–2 MB statements; it's now 3 MB.
+  - nginx's 413 was an HTML page; both 413 paths now return the same JSON message.
+  - Port 5432 can be taken by another local Postgres; `POSTGRES_PORT` is documented.
+- **Finding (documented, not changed):** XGBoost metrics differ by about 1.4% between the Linux image and the committed Windows run (multithreaded float summation order). The categorizer and anomaly metrics are identical.
+- **Checks:** 499 backend tests pass, ruff is clean, 5 frontend tests pass, oxlint has 0 errors, and the build succeeds.

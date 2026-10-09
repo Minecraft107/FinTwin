@@ -43,13 +43,13 @@ This document is the design reference for FinTwin. It explains **what** each par
 
 | Layer | Choice | Why |
 |---|---|---|
-| Frontend | React 18 + Vite, JavaScript, React Router, Recharts, Tailwind CSS, lucide-react | Stack from the synopsis. Vite is the current standard React toolchain. Plain JS (not TS) so the whole team can read it. |
+| Frontend | React 19 + Vite, JavaScript, React Router, Recharts, Tailwind CSS, lucide-react | Stack from the synopsis. Vite is the current standard React toolchain. Plain JS (not TS) so the whole team can read it. |
 | Backend | Flask 3, Flask-SQLAlchemy 2, Flask-Migrate (Alembic), Flask-JWT-Extended, Flask-CORS, pydantic v2 | Stack from the synopsis. pydantic gives typed request validation with readable errors. |
 | DB | PostgreSQL 16 (Docker). Tests run on SQLite in-memory | Models avoid Postgres-only types, so the same models run on both. |
 | Data | pandas, NumPy | Synopsis. |
 | ML | scikit-learn, XGBoost, joblib | Synopsis. Holt exponential smoothing is ~20 lines of NumPy, so there's no statsmodels dependency. |
-| LLM | `requests` → OpenAI / Gemini REST; deterministic `LocalProvider` fallback | No vendor SDKs. Provider is chosen by env var, and the app works without any key. |
-| RAG | Markdown knowledge base → chunks → TF-IDF + LSA (TruncatedSVD) embeddings → NumPy vector store | Real retrieval with no torch/GPU download (~2 GB avoided). Upgrade path: sentence-transformers or pgvector. |
+| LLM | stdlib `urllib` → OpenAI / Gemini REST; deterministic `LocalProvider` fallback | No vendor SDKs. Provider is chosen by env var, and the app works without any key. |
+| RAG | Markdown knowledge base → chunks → TF-IDF + LSA (TruncatedSVD) embeddings → in-memory NumPy vector store | Real retrieval with no torch/GPU download (~2 GB avoided). Upgrade path: sentence-transformers or pgvector. |
 | Serving | gunicorn (backend), nginx (frontend build), docker-compose | `docker compose up --build` starts everything. |
 
 Currency is **INR only**. Dates are calendar dates (no time-of-day, no time zones).
@@ -335,7 +335,7 @@ For each goal:
 ```
 question
   │
-  ├─► 1. Intent detection: TF-IDF + LogisticRegression trained on ~400 hand-written utterances
+  ├─► 1. Intent detection: weighted keyword rules (see the note above)
   │      (affordability, score_explanation, overspending, goal_planning, emergency_fund, what_if,
   │       improve_health, forecast, risk, concept_question, out_of_scope), confidence < 0.4 → concept_question
   ├─► 2. Entity extraction: regex for ₹ amounts ("1,30,000", "5 lakh", "2 cr", "15k"), %, durations, goal names
@@ -343,7 +343,7 @@ question
   │      CURRENT_FINANCIAL_STATE · FINANCIAL_HEALTH_SCORE · RECENT_TRANSACTIONS · FORECAST ·
   │      RISKS · GOALS · SIMULATION_RESULTS
   ├─► 4. Calculations: affordability / what_if → parsed into a scenario → SIMULATION ENGINE
-  ├─► 5. RAG retrieval: top-3 knowledge chunks (cosine ≥ 0.15) with source ids
+  ├─► 5. RAG retrieval: top-3 knowledge chunks (hybrid cosine ≥ 0.12 and ≥ half the best) with source ids
   ├─► 6. LLM (provider chosen by env) with strict system prompt; requested JSON output:
   │      {facts[], calculations[], predictions[], recommendations[], summary}
   ├─► 7. Grounding check: every ₹ / % number in the answer must match a number in the context
@@ -357,13 +357,13 @@ question
 
 **RAG pipeline** (`services/coach/rag.py`):
 ```
-knowledge_base/*.md (≈12 docs written for this project: budgeting, 50/30/20, emergency funds,
+knowledge_base/*.md (13 guides written for this project: budgeting, 50/30/20, emergency funds,
 debt & EMIs, DTI, SIPs & compounding, asset allocation basics, goal planning, insurance basics,
 credit score, inflation, reading your health score)
   → chunk by heading, ~120 words with 30-word overlap, metadata {doc, heading}
-  → TF-IDF (word 1–2-grams, sublinear tf) + TruncatedSVD(≤128 dims) → L2-normalised dense vectors
-  → NumPy matrix + metadata persisted to ml/models/rag_index.joblib (rebuilt automatically when KB files change)
-  → retrieve: hybrid cosine (0.5·tfidf + 0.5·lsa), top-k = 3, threshold 0.15
+  → TF-IDF (word 1–2-grams, sublinear tf) + TruncatedSVD(≤64 dims) → L2-normalised dense vectors
+  → NumPy matrix + metadata held in memory (~60 ms to build; rebuilt automatically when KB files change)
+  → retrieve: hybrid cosine (0.5·tfidf + 0.5·lsa), top-k = 3, one per guide, ≥ 0.12 and ≥ half the best
 ```
 If there are no documents, retrieval returns an empty list and the coach still answers from user data.
 
@@ -373,17 +373,17 @@ If there are no documents, retrieval returns an empty list and the coach still a
 
 ```
 ml/
-├── datasets/      build_population.py  → synthetic users (same generator as the seed) → parquet
-│                  categorizer_corpus.csv (labelled descriptions) · coach_intents.csv
-├── training/      train_categorizer.py · train_forecaster.py · train_intent.py · build_rag_index.py
-├── evaluation/    eval_forecaster.py (MAE/RMSE/R² vs baselines, time + user split)
-│                  eval_anomaly.py (precision/recall/F1 on injected, labelled anomalies)
-│                  eval_categorizer.py (accuracy, macro-F1, confusion matrix)
-└── models/        *.joblib / *.json artifacts + metrics/*.json + training log
+├── pipeline.py    build data → train → evaluate → save artifacts + metrics (one command)
+├── datasets/      population.py → synthetic users (same generator as the seed, in memory)
+│                  categorizer_corpus.csv (349 labelled merchants)
+├── training/      forecaster.py (train + MAE/RMSE/R² vs baselines, user + time split)
+│                  categorizer.py (train + merchant-grouped CV)
+├── evaluation/    anomaly.py (precision/recall/F1 on injected, labelled anomalies)
+└── models/        *.joblib artifacts (git-ignored, built by training) + metrics/*.json (committed)
 ```
 * Feature engineering lives once, in `backend/app/services/ml/features.py`. Training scripts import it, so training and inference can't diverge.
-* Inference code lives in `backend/app/services/ml/` and loads artifacts lazily. If an artifact is missing, the matching fallback runs and `/api/ml/status` reports it (categorizer → rules + Other · forecaster → baselines only · intent → keyword rules).
-* `flask ml train-all` (or `python -m ml.training.train_all`) retrains everything and refreshes the metrics.
+* Inference code lives in `backend/app/services/ml/` and loads artifacts lazily. If an artifact is missing, the matching fallback runs and `/api/ml/status` reports it (categorizer → rules + Other · forecaster → baselines only).
+* `flask ml train` (or `python -m ml.pipeline`) retrains everything and refreshes the metrics. Docker images run it at build time.
 * **Anomaly validation:** real labelled personal anomalies don't exist, so the synthetic generator injects anomalies with known labels (oversized purchases, duplicate charges, category spikes). Detection is scored against those labels. The limitation (synthetic labels, so the scores are optimistic) is stated in `docs/ml.md`.
 
 ---
@@ -452,7 +452,7 @@ Every chart and KPI is fetched from the API, with no static numbers anywhere in 
 * Passwords are hashed with `werkzeug.security` (scrypt). Pydantic validates the email and enforces a minimum password length of 8.
 * JWT access tokens (HS256, 12 h expiry), with the secret taken from `JWT_SECRET_KEY`. The app refuses to start in production mode with the default secret.
 * Every repository query filters by `user_id` taken from the token and never from the request body.
-* SQLAlchemy ORM only (parameterised queries). CSV uploads are size-limited (2 MB) and parsed with pandas, and are never executed or stored raw.
+* SQLAlchemy ORM only (parameterised queries). CSV uploads are size-limited (2 MB, enforced by both nginx and Flask) and parsed with the `csv` module; they are never executed or stored raw.
 * CORS is restricted to `FRONTEND_ORIGIN`. All secrets come from env vars, with `.env.example` committed and `.env` git-ignored.
 * Known trade-off: the token lives in `localStorage` (simple for an SPA, but exposed to XSS). The upgrade path is httpOnly cookies + CSRF, which Flask-JWT-Extended supports.
 
@@ -481,7 +481,7 @@ fintwin/
 │   │   ├── __init__.py            create_app() factory, error handlers, blueprint registration
 │   │   ├── config.py              env-driven config classes
 │   │   ├── extensions.py          db, migrate, jwt, cors
-│   │   ├── cli.py                 flask seed · flask ml train-all · flask snapshots backfill
+│   │   ├── cli.py                 flask seed · flask sample-csv · flask ml train
 │   │   ├── models/                SQLAlchemy models (one module per aggregate)
 │   │   ├── schemas/               pydantic request/response models
 │   │   ├── repositories/          user-scoped queries → DataFrames/dataclasses
