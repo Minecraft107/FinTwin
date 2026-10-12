@@ -1,26 +1,63 @@
 @import "tailwindcss";
 
-/* Design tokens. UI accent = emerald (brand); charts use the validated categorical
-   palette below (blue, orange, aqua) and reserved status colours for state. */
+/* Design tokens: warm monochrome canvas, one muted green accent, pastel status tints.
+   Tailwind's slate/red/green/amber/orange scales are re-tinted here so every page shares
+   one warm gray family and the same washed-out status colours. Charts keep the validated
+   categorical palette (blue, orange, aqua) defined in charts.jsx. */
 @theme {
-  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --color-brand-50: #ecfdf5;
-  --color-brand-100: #d1fae5;
-  --color-brand-500: #10b981;
-  --color-brand-600: #059669;
-  --color-brand-700: #047857;
-  --color-page: #f6f7f9;
-  --color-ink: #0f172a;
-  --color-ink-2: #475569;
-  --color-ink-3: #64748b;
-  --color-line: #e2e8f0;
+  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-serif: "Newsreader", "Iowan Old Style", Georgia, serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", Consolas, monospace;
+
+  --color-brand-50: #edf3ec;
+  --color-brand-100: #dbe8d9;
+  --color-brand-500: #5a8a62;
+  --color-brand-600: #346538;
+  --color-brand-700: #2a522e;
+
+  --color-page: #f7f6f3;
+  --color-surface: #fbfbfa;
+  --color-ink: #1f1e1c;
+  --color-ink-2: #57534e;
+  --color-ink-3: #787774;
+  --color-line: #eae8e4;
+
   --color-series-1: #2a78d6;
   --color-series-2: #eb6834;
   --color-series-3: #1baf7a;
-  --color-good: #0ca30c;
-  --color-warning: #fab219;
-  --color-serious: #ec835a;
-  --color-critical: #d03b3b;
+  --color-good: #4f8a56;
+  --color-warning: #d9a21b;
+  --color-serious: #d9845a;
+  --color-critical: #c24a47;
+
+  --color-slate-50: #faf9f7;
+  --color-slate-100: #f1efeb;
+  --color-slate-400: #a8a39c;
+  --color-slate-500: #78736c;
+  --color-slate-700: #44403c;
+  --color-slate-900: #1f1e1c;
+  --color-red-50: #fdebec;
+  --color-red-200: #f2cdcd;
+  --color-red-600: #b2423f;
+  --color-red-700: #9f2f2d;
+  --color-red-800: #8a2826;
+  --color-green-50: #edf3ec;
+  --color-green-600: #4f8a56;
+  --color-green-700: #346538;
+  --color-green-800: #2e5a32;
+  --color-amber-50: #fbf3db;
+  --color-amber-600: #b8860b;
+  --color-amber-800: #956400;
+  --color-orange-50: #fcefe6;
+  --color-orange-600: #c06a3a;
+  --color-orange-800: #9a4a1e;
+
+  --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
+  --shadow-lift: 0 2px 8px rgba(31, 30, 28, 0.04);
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 html,
@@ -32,8 +69,64 @@ body,
 body {
   background: var(--color-page);
   color: var(--color-ink);
+  font-family: var(--font-sans);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Fine paper grain over the whole app; fixed and non-interactive so it never repaints on scroll. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 60;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
 }
 
 .tabular {
   font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brand-600);
+  outline-offset: 2px;
+}
+
+/* Entry motion: fade-up, staggered by --i. Disabled entirely for reduced-motion users. */
+@media (prefers-reduced-motion: no-preference) {
+  .reveal {
+    animation: reveal 600ms var(--ease-out-soft) both;
+    animation-delay: calc(var(--i, 0) * 70ms);
+  }
+  .reveal-on-scroll {
+    opacity: 0;
+    transform: translateY(12px);
+    transition:
+      opacity 700ms var(--ease-out-soft),
+      transform 700ms var(--ease-out-soft);
+    transition-delay: calc(var(--i, 0) * 80ms);
+  }
+  .reveal-on-scroll.is-visible {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
 }

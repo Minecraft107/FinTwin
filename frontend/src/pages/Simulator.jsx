@@ -72,7 +72,7 @@ function fromPayload(p) {
   return { ...base, ...Object.fromEntries(Object.entries(p).map(([k, v]) => [k, v ?? ''])) }
 }
 
-function ChangeEditor({ change, goals, onChange, onRemove }) {
+function ChangeEditor({ change, index, goals, onChange, onRemove }) {
   const set = (k) => (e) => onChange({ ...change, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value })
   const t = change.type
   const amountOrPct = (label) => (
@@ -88,10 +88,13 @@ function ChangeEditor({ change, goals, onChange, onRemove }) {
     </>
   )
   return (
-    <div className="rounded-lg border border-line p-4">
-      <div className="mb-3 flex items-center justify-between">
-        <span className="text-sm font-semibold text-ink">{TYPES[t]}</span>
-        <button type="button" className="rounded p-1 text-ink-3 hover:bg-slate-100" aria-label={`Remove ${TYPES[t]}`} onClick={onRemove}><X className="size-4" /></button>
+    <div className="rounded-lg border border-line bg-surface p-5">
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-baseline gap-3">
+          <span className="font-mono text-[11px] text-ink-3">{String(index + 1).padStart(2, '0')}</span>
+          <span className="text-[15px] font-medium tracking-tight text-ink">{TYPES[t]}</span>
+        </div>
+        <button type="button" className="grid size-8 place-items-center rounded-md text-ink-3 transition duration-200 hover:bg-white hover:text-ink" aria-label={`Remove ${TYPES[t]}`} onClick={onRemove}><X className="size-4" strokeWidth={1.75} /></button>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {t === 'large_purchase' && (
@@ -99,7 +102,7 @@ function ChangeEditor({ change, goals, onChange, onRemove }) {
             <Field label="Amount (₹)"><Input type="number" min="1" required value={change.amount} onChange={set('amount')} /></Field>
             <Field label="When"><Input type="date" value={change.date} onChange={set('date')} /></Field>
             <Field label="What (optional)"><Input value={change.label} onChange={set('label')} placeholder="e.g. Laptop" /></Field>
-            <label className="flex items-end gap-2 pb-2 text-sm text-ink-2"><input type="checkbox" checked={change.financed_by_loan} onChange={set('financed_by_loan')} /> Pay with a loan / EMI</label>
+            <label className="flex items-end gap-2 pb-2.5 text-sm text-ink-2"><input type="checkbox" className="size-4 accent-[#1f1e1c]" checked={change.financed_by_loan} onChange={set('financed_by_loan')} /> Pay with a loan / EMI</label>
             {change.financed_by_loan && (
               <>
                 <Field label="Loan rate (% a year)"><Input type="number" min="0" max="60" step="0.1" value={change.loan_rate} onChange={set('loan_rate')} /></Field>
@@ -129,7 +132,7 @@ function ChangeEditor({ change, goals, onChange, onRemove }) {
             <Field label="Rate (% a year)"><Input type="number" min="0" max="60" step="0.1" required value={change.annual_rate} onChange={set('annual_rate')} /></Field>
             <Field label="Tenure (months)"><Input type="number" min="1" max="360" required value={change.tenure_months} onChange={set('tenure_months')} /></Field>
             <Field label="Starts"><Input type="date" value={change.start_date} onChange={set('start_date')} /></Field>
-            <label className="flex items-center gap-2 text-sm text-ink-2 sm:col-span-2"><input type="checkbox" checked={change.disbursed_to_cash} onChange={set('disbursed_to_cash')} /> The money comes into my account (untick if it's spent straight away, e.g. on a car)</label>
+            <label className="flex items-center gap-2 text-sm text-ink-2 sm:col-span-2"><input type="checkbox" className="size-4 accent-[#1f1e1c]" checked={change.disbursed_to_cash} onChange={set('disbursed_to_cash')} /> The money comes into my account (untick if it's spent straight away, e.g. on a car)</label>
           </>
         )}
         {t === 'goal_delay' && (
@@ -191,25 +194,27 @@ function Results({ result, onSaved }) {
 
   return (
     <div className="space-y-4">
-      <Card>
-        <div className="flex flex-wrap items-center gap-3">
-          <RiskBadge level={result.risk_level} />
-          <p className="text-sm font-medium text-ink">{result.recommendation}</p>
-        </div>
-        <p className="mt-3 text-sm text-ink-2">{result.explanation}</p>
+      <Card className={`reveal border-l-4 ${RISK_EDGE[result.risk_level] ?? 'border-l-line'}`}>
+        <RiskBadge level={result.risk_level} />
+        <p className="mt-3 max-w-3xl font-serif text-[1.45rem] leading-snug tracking-[-0.01em] text-ink">{result.recommendation}</p>
+        <p className="mt-3 max-w-3xl text-sm text-ink-2">{result.explanation}</p>
         {result.risk_factors.length > 0 && (
-          <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-ink-2">{result.risk_factors.map((f) => <li key={f}>{f}</li>)}</ul>
+          <ul className="mt-4 space-y-1.5 border-t border-line pt-4 text-sm text-ink-2">
+            {result.risk_factors.map((f) => (
+              <li key={f} className="flex gap-2.5"><span className="mt-2 size-1 shrink-0 rounded-full bg-ink-3" aria-hidden />{f}</li>
+            ))}
+          </ul>
         )}
       </Card>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="reveal grid grid-cols-2 gap-4 lg:grid-cols-4" style={{ '--i': 1 }}>
         <Kpi label="Cash in 12 months" value={signed(i.cash_change)} hint="vs without the change" />
         <Kpi label="Net worth in 12 months" value={signed(i.net_worth_change)} />
         <Kpi label="Monthly surplus" value={signed(i.monthly_cash_flow_change)} />
         <Kpi label="Health score" value={i.health_score_change == null ? '—' : signed(i.health_score_change, (v) => v.toFixed(1))} hint={`${result.simulated_state.health_score?.toFixed(0) ?? '—'} vs ${result.baseline_state.health_score?.toFixed(0) ?? '—'}`} />
       </div>
       {(i.emergency_fund_drawn > 0 || i.first_shortfall_month) && (
-        <Card>
+        <Card className="bg-red-50/40">
           <p className="text-sm text-ink-2">
             Emergency fund used: <strong className="text-ink">{inr(i.emergency_fund_drawn)}</strong>
             {i.first_shortfall_month && <> · money runs out in <strong className="text-red-700">{monthLabel(i.first_shortfall_month)}</strong> (short by up to {inr(i.max_shortfall)})</>}
@@ -217,29 +222,29 @@ function Results({ result, onSaved }) {
         </Card>
       )}
 
-      <Card title="Month by month" action={<Segmented label="Metric" options={METRICS} value={metric} onChange={setMetric} />}>
+      <Card title="Month by month" subtitle="With and without the change" action={<Segmented label="Metric" options={METRICS} value={metric} onChange={setMetric} />}>
         <ScenarioChart timeline={result.timeline} metric={metric} />
       </Card>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card title="Current vs simulated state">
+      <div className="space-y-4">
+        <Card title="Current vs simulated state" subtitle="Today, and 12 months out with and without the change">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="text-left text-xs text-ink-3"><tr><th className="pb-2 font-medium" />{states.map(([label]) => <th key={label} className="pb-2 text-right font-medium">{label}</th>)}</tr></thead>
+              <thead className="border-b border-line text-left font-mono text-[11px] text-ink-3"><tr><th className="pb-2.5 font-normal" />{states.map(([label]) => <th key={label} className="pb-2.5 pl-3 text-right align-bottom font-normal">{label}</th>)}</tr></thead>
               <tbody className="divide-y divide-line">
                 {ROWS.map(([label, key, fmt]) => (
-                  <tr key={key}><td className="py-2 text-ink-2">{label}</td>{states.map(([l, s]) => <td key={l} className="tabular py-2 text-right">{fmt(s[key])}</td>)}</tr>
+                  <tr key={key}><td className="py-2.5 text-ink-2">{label}</td>{states.map(([l, s], j) => <td key={l} className={`tabular py-2.5 pl-3 text-right whitespace-nowrap ${j === 2 ? 'font-medium text-ink' : 'text-ink-2'}`}>{fmt(s[key])}</td>)}</tr>
                 ))}
               </tbody>
             </table>
           </div>
         </Card>
-        <div className="space-y-4">
+        <div className="grid items-start gap-4 md:grid-cols-2">
           {result.goals.length > 0 && (
             <Card title="Goals">
-              <ul className="space-y-2 text-sm">
+              <ul className="-my-2.5 divide-y divide-line text-sm">
                 {result.goals.map((g) => (
-                  <li key={g.goal_id} className="flex justify-between gap-3">
+                  <li key={g.goal_id} className="flex justify-between gap-3 py-2.5">
                     <span className="text-ink">{g.name}</span>
                     <span className="text-right text-ink-2">
                       {monthLabel(g.scenario_completion) || 'not at this pace'}
@@ -252,10 +257,10 @@ function Results({ result, onSaved }) {
             </Card>
           )}
           <Card title="Assumptions">
-            <ul className="list-disc space-y-1 pl-5 text-xs text-ink-2">{result.assumptions.map((a) => <li key={a}>{a}</li>)}</ul>
-            {result.notes.map((n) => <p key={n} className="mt-2 text-xs text-amber-800">{n}</p>)}
+            <ul className="space-y-2 text-xs text-ink-2">{result.assumptions.map((a) => <li key={a} className="flex gap-2.5"><span className="mt-1.5 size-1 shrink-0 rounded-full bg-ink-3" aria-hidden />{a}</li>)}</ul>
+            {result.notes.map((n) => <p key={n} className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800">{n}</p>)}
           </Card>
-          <Card title="Save this scenario">
+          <Card title="Save this scenario" className="md:col-span-2">
             <form onSubmit={save} className="flex gap-2">
               <Input required maxLength={120} placeholder="e.g. New laptop in January" value={name} onChange={(e) => setName(e.target.value)} aria-label="Scenario name" />
               <Button type="submit" loading={saving}><Save className="size-4" /> Save</Button>
@@ -267,6 +272,9 @@ function Results({ result, onSaved }) {
     </div>
   )
 }
+
+// Left edge of the verdict card carries the risk level's colour.
+const RISK_EDGE = { LOW: 'border-l-good', MEDIUM: 'border-l-warning', HIGH: 'border-l-serious', CRITICAL: 'border-l-critical' }
 
 // Prefill from links such as /simulator?type=large_purchase&amount=130000
 function changesFromQuery(params) {
@@ -325,11 +333,11 @@ export default function Simulator() {
       />
       <div className="grid gap-4 xl:grid-cols-3">
         <div className="space-y-4 xl:col-span-2">
-          <Card title="Scenario">
+          <Card title="Scenario" subtitle="Combine up to 10 changes">
             <form onSubmit={run} className="space-y-3">
-              {changes.length === 0 && <p className="text-sm text-ink-2">Add one or more changes to simulate.</p>}
+              {changes.length === 0 && <p className="rounded-lg border border-dashed border-ink/15 px-4 py-6 text-center text-sm text-ink-2">Add one or more changes below to build a scenario.</p>}
               {changes.map((c, idx) => (
-                <ChangeEditor key={c.key} change={c} goals={goals.data ?? []}
+                <ChangeEditor key={c.key} change={c} index={idx} goals={goals.data ?? []}
                   onChange={(next) => setChanges(changes.map((x, j) => (j === idx ? next : x)))}
                   onRemove={() => setChanges(changes.filter((_, j) => j !== idx))} />
               ))}
@@ -340,7 +348,7 @@ export default function Simulator() {
                   </Select>
                 </Field>
                 <Button variant="secondary" disabled={changes.length >= 10} onClick={() => setChanges([...changes, { ...DEFAULTS[adding], type: adding, key: crypto.randomUUID() }])}>
-                  <Plus className="size-4" /> Add
+                  <Plus className="size-4" strokeWidth={1.75} /> Add
                 </Button>
                 <Field label="Horizon">
                   <Select value={horizon} onChange={(e) => setHorizon(Number(e.target.value))}>
@@ -348,26 +356,26 @@ export default function Simulator() {
                   </Select>
                 </Field>
                 <Field label="Inflation (% a year)"><Input type="number" min="0" max="20" step="0.5" value={inflation} onChange={(e) => setInflation(e.target.value)} className="w-28" /></Field>
-                <Button type="submit" loading={busy} disabled={!changes.length} className="ml-auto"><Play className="size-4" /> Run simulation</Button>
+                <Button type="submit" loading={busy} disabled={!changes.length} className="ml-auto"><Play className="size-4" strokeWidth={1.75} /> Run simulation</Button>
               </div>
               {error && <p className="text-sm text-red-700" role="alert">{error}</p>}
             </form>
           </Card>
           {result ? <Results result={result} onSaved={saved.reload} /> : <EmptyState title="Results appear here">Try “Big purchase” for ₹1,30,000, or a loan, a pay cut or a higher SIP.</EmptyState>}
         </div>
-        <Card title="Saved scenarios" subtitle="Re-run against your latest data">
+        <Card title="Saved scenarios" subtitle="Re-run against your latest data" className="self-start xl:sticky xl:top-6">
           {!saved.data?.length ? <p className="text-sm text-ink-2">None saved yet.</p> : (
             <ul className="divide-y divide-line">
               {saved.data.map((s) => (
                 <li key={s.id} className="py-3 text-sm">
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <div className="font-medium text-ink">{s.name}</div>
-                      {s.latest_result && <div className="mt-1 flex items-center gap-2"><RiskBadge level={s.latest_result.risk_level} /><span className="text-xs text-ink-3">{signed(s.latest_result.cash_change_12m)} cash</span></div>}
+                      <div className="text-ink">{s.name}</div>
+                      {s.latest_result && <div className="mt-1 flex items-center gap-2"><RiskBadge level={s.latest_result.risk_level} /><span className="tabular text-xs text-ink-3">{signed(s.latest_result.cash_change_12m)} cash</span></div>}
                     </div>
                     <div className="flex">
-                      <button type="button" className="rounded p-1.5 text-ink-3 hover:bg-slate-100" aria-label={`Re-run ${s.name}`} onClick={() => rerun(s.id)}><RotateCw className="size-4" /></button>
-                      <button type="button" className="rounded p-1.5 text-ink-3 hover:bg-red-50 hover:text-red-700" aria-label={`Delete ${s.name}`} onClick={() => remove(s.id)}><Trash2 className="size-4" /></button>
+                      <button type="button" className="grid size-8 place-items-center rounded-md text-ink-3 transition duration-200 hover:bg-slate-100 hover:text-ink" aria-label={`Re-run ${s.name}`} onClick={() => rerun(s.id)}><RotateCw className="size-4" strokeWidth={1.75} /></button>
+                      <button type="button" className="grid size-8 place-items-center rounded-md text-ink-3 transition duration-200 hover:bg-red-50 hover:text-red-700" aria-label={`Delete ${s.name}`} onClick={() => remove(s.id)}><Trash2 className="size-4" strokeWidth={1.75} /></button>
                     </div>
                   </div>
                 </li>

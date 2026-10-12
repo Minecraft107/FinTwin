@@ -1,3 +1,4 @@
+import { ArrowLeft } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { Button, Field, Input } from '../components/ui'
@@ -6,14 +7,21 @@ import { errorText } from '../services/api'
 
 function AuthLayout({ title, subtitle, children, footer }) {
   return (
-    <div className="grid min-h-screen place-items-center px-4 py-10">
+    <div className="relative grid min-h-[100dvh] place-items-center px-4 py-16">
+      <Link
+        to="/"
+        className="group absolute top-5 left-4 inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-ink-2 transition duration-200 hover:bg-white hover:text-ink sm:top-6 sm:left-6"
+      >
+        <ArrowLeft className="size-4 transition duration-200 group-hover:-translate-x-0.5" strokeWidth={1.75} aria-hidden />
+        Back to home
+      </Link>
       <div className="w-full max-w-sm">
         <Link to="/" className="mb-6 flex items-center justify-center gap-2">
-          <div className="grid size-9 place-items-center rounded-lg bg-brand-600 font-bold text-white">F</div>
-          <span className="text-lg font-semibold">FinTwin</span>
+          <div className="grid size-9 place-items-center rounded-md bg-ink font-serif text-xl leading-none text-white">F</div>
+          <span className="text-lg font-medium tracking-tight">FinTwin</span>
         </Link>
-        <div className="rounded-xl border border-line bg-white p-6 shadow-sm">
-          <h1 className="text-xl font-semibold text-ink">{title}</h1>
+        <div className="rounded-xl border border-line bg-white p-7">
+          <h1 className="font-serif text-[1.75rem] leading-tight tracking-[-0.02em] text-ink">{title}</h1>
           <p className="mt-1 text-sm text-ink-2">{subtitle}</p>
           <div className="mt-5">{children}</div>
         </div>
