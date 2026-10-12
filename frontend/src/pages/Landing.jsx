@@ -1,25 +1,47 @@
 import { ArrowRight, Bot, Gauge, LineChart, Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { Meter, Reveal, RiskBadge, ScoreGauge, SeverityBadge } from '../components/ui'
+import { Reveal, ScreenFrame } from '../components/ui'
 import { useAuth } from '../context/AuthContext'
 
-// Figures shown in the preview and the bento come from the seeded demo account.
-const DEMO = {
-  score: 65,
-  grade: 'C',
-  label: 'Fair',
-  stats: [
-    { label: 'Monthly surplus', value: '₹7,720' },
-    { label: 'Savings ratio', value: '16.8%' },
-    { label: 'Emergency fund', value: '1.5 months' },
-  ],
-  components: [
-    { label: 'Debt burden', score: 89 },
-    { label: 'Savings', score: 71 },
-    { label: 'Emergency fund', score: 40 },
-  ],
-}
+// Weights of the Financial Health Score components (services/financial/health_score.py).
+const WEIGHTS = [
+  { label: 'Savings', weight: 20 },
+  { label: 'Emergency fund', weight: 20 },
+  { label: 'Debt burden', weight: 20 },
+  { label: 'Cash-flow stability', weight: 15 },
+  { label: 'Investments', weight: 10 },
+  { label: 'Goal progress', weight: 10 },
+  { label: 'Spending behaviour', weight: 5 },
+]
+
+// Real screens captured from the seeded demo account (public/screens).
+const SHOWCASE = [
+  {
+    id: 'twin',
+    tab: 'Digital Twin',
+    title: 'One model, rebuilt from your data',
+    text: 'Income, spending, balances and ratios, each marked as measured from transactions or declared in your profile, with month-by-month history.',
+    src: '/screens/twin.webp',
+    alt: 'The Digital Twin page: current state tiles for income, expenses, savings, investments, debt, emergency fund, goals and net worth, followed by the health score.',
+  },
+  {
+    id: 'simulator',
+    tab: 'What-If Simulator',
+    title: 'Test a decision before you make it',
+    text: 'A ₹4,00,000 purchase, simulated month by month: the risk level, when cash runs short, and which goals slip, with every assumption listed.',
+    src: '/screens/simulator.webp',
+    alt: 'The What-If Simulator after simulating a ₹4,00,000 purchase, showing a critical risk result and its risk factors.',
+  },
+  {
+    id: 'coach',
+    tab: 'AI Coach',
+    title: 'Answers built from your own figures',
+    text: 'Asked about a laptop, the coach runs the simulator, shows the calculation behind its answer and names the guide it drew on.',
+    src: '/screens/coach.webp',
+    alt: 'The AI Financial Coach answering "Can I afford a ₹1,30,000 laptop?" with sections for your data, calculations and estimates.',
+  },
+]
 
 const STEPS = [
   { title: 'Bring your data', text: 'Import a bank statement or add transactions, loans, investments and goals.' },
@@ -77,46 +99,38 @@ function PrimaryCta({ user }) {
   )
 }
 
-function TwinPreview() {
+function Showcase() {
+  const [active, setActive] = useState(SHOWCASE[0].id)
+  const item = SHOWCASE.find((s) => s.id === active)
   return (
-    <div className="rounded-2xl bg-ink/[0.03] p-2 ring-1 ring-line">
-      <div className="overflow-hidden rounded-xl border border-line bg-white shadow-[0_30px_60px_-30px_rgba(31,30,28,0.25)]">
-        <div className="flex items-center gap-1.5 border-b border-line px-4 py-3">
-          <span className="size-2.5 rounded-full bg-slate-100 ring-1 ring-line" />
-          <span className="size-2.5 rounded-full bg-slate-100 ring-1 ring-line" />
-          <span className="size-2.5 rounded-full bg-slate-100 ring-1 ring-line" />
-          <span className="ml-3 font-mono text-[11px] text-ink-3">fintwin · demo account</span>
+    <section className="mx-auto max-w-6xl px-6 py-16 lg:py-20" aria-labelledby="showcase-title">
+      <Reveal className="grid gap-8 lg:grid-cols-12 lg:items-end">
+        <div className="lg:col-span-7">
+          <p className="font-mono text-xs text-ink-3">Inside the app</p>
+          <h2 id="showcase-title" className="mt-4 font-serif text-4xl leading-[1.1] tracking-[-0.02em] text-ink">
+            {item.title}.
+          </h2>
+          <p className="mt-4 max-w-xl text-sm text-ink-2">{item.text}</p>
         </div>
-        <div className="grid gap-6 p-6 sm:grid-cols-[auto_1fr] sm:items-center">
-          <ScoreGauge score={DEMO.score} grade={DEMO.grade} label={DEMO.label} size={128} />
-          <dl className="divide-y divide-line">
-            {DEMO.stats.map((s) => (
-              <div key={s.label} className="flex items-baseline justify-between gap-4 py-2.5">
-                <dt className="text-sm text-ink-2">{s.label}</dt>
-                <dd className="tabular text-sm font-medium text-ink">{s.value}</dd>
-              </div>
-            ))}
-          </dl>
+        <div className="flex flex-wrap gap-1 rounded-lg border border-line bg-white p-1 lg:col-span-5 lg:justify-self-end" role="group" aria-label="Choose a screen">
+          {SHOWCASE.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              aria-pressed={s.id === active}
+              onClick={() => setActive(s.id)}
+              className={`rounded-md px-3.5 py-1.5 text-sm transition duration-200 active:scale-[0.98] ${s.id === active ? 'bg-ink text-white' : 'text-ink-2 hover:bg-slate-100 hover:text-ink'}`}
+            >
+              {s.tab}
+            </button>
+          ))}
         </div>
-        <div className="grid gap-px border-t border-line bg-line sm:grid-cols-2">
-          <div className="bg-surface p-5">
-            <p className="font-mono text-[11px] text-ink-3">What if · ₹1,30,000 laptop</p>
-            <div className="mt-2 flex items-center gap-2">
-              <RiskBadge level="LOW" />
-              <span className="tabular text-xs text-ink-2">score 68 → 68 in a year</span>
-            </div>
-          </div>
-          <div className="bg-surface p-5">
-            <p className="font-mono text-[11px] text-ink-3">Risk alert</p>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <SeverityBadge level="HIGH" />
-              <span className="text-xs text-ink-2">Food &amp; dining up 76%</span>
-            </div>
-          </div>
-        </div>
-      </div>
-      <p className="px-2 pt-2.5 pb-0.5 font-mono text-[10.5px] text-ink-3">Figures from the seeded demo account.</p>
-    </div>
+      </Reveal>
+      <Reveal index={1} className="mt-10">
+        <ScreenFrame key={item.id} src={item.src} alt={item.alt} label={`fintwin · ${item.tab.toLowerCase()}`} />
+        <p className="mt-3 font-mono text-[10.5px] text-ink-3">Real screen from the demo account. Its data is synthetic and regenerated on each reset.</p>
+      </Reveal>
+    </section>
   )
 }
 
@@ -199,9 +213,17 @@ export default function Landing() {
             </dl>
           </div>
           <div className="reveal lg:col-span-6" style={{ '--i': 2 }}>
-            <TwinPreview />
+            <ScreenFrame
+              eager
+              src="/screens/dashboard.webp"
+              label="fintwin · dashboard"
+              alt="The FinTwin dashboard for the demo account: health score gauge with seven components, monthly KPIs and a 12-month income versus spending chart."
+              className="lg:-mr-24 xl:-mr-40"
+            />
           </div>
         </section>
+
+        <Showcase />
 
         <section className="mx-auto max-w-6xl px-6 py-16 lg:py-20" aria-labelledby="pillars-title">
           <div className="grid gap-12 lg:grid-cols-12">
@@ -223,14 +245,17 @@ export default function Landing() {
                 title="Analyze"
                 text="A transparent 0–100 Financial Health Score built from savings, emergency cover, debt, cash-flow stability, investments, goals and spending."
               >
-                <ul className="space-y-3">
-                  {DEMO.components.map((c) => (
+                <ul className="grid gap-x-6 gap-y-2.5 sm:grid-cols-2">
+                  {WEIGHTS.map((c) => (
                     <li key={c.label}>
-                      <div className="mb-1.5 flex justify-between text-xs">
+                      <div className="mb-1 flex justify-between text-xs">
                         <span className="text-ink-2">{c.label}</span>
-                        <span className="tabular font-medium text-ink">{c.score}</span>
+                        <span className="tabular font-medium text-ink">{c.weight}%</span>
                       </div>
-                      <Meter value={c.score} label={c.label} />
+                      {/* neutral bar: a weight is a share, not a good/bad status */}
+                      <div className="h-1.5 rounded-full bg-slate-100" aria-hidden>
+                        <div className="h-full rounded-full bg-ink/70" style={{ width: `${c.weight * 5}%` }} />
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -256,10 +281,13 @@ export default function Landing() {
                 title="Decide"
                 text="Ask questions in plain English, lakh and crore included. Affordability questions run the simulator before the coach answers."
               >
-                <blockquote className="border-l-2 border-brand-600 pl-4 text-sm text-ink-2">
-                  “Based on a simulation of spending ₹1,30,000 on a purchase now, this looks manageable. At your current
-                  monthly surplus of ₹7,720, saving it would take about 17 months.”
-                </blockquote>
+                <div className="space-y-2 text-sm">
+                  <p className="ml-auto w-fit rounded-lg bg-ink px-3.5 py-2 text-white">Can I afford a laptop for 1.3 lakh?</p>
+                  <p className="w-fit max-w-sm rounded-lg border border-line bg-surface px-3.5 py-2 text-ink-2">
+                    Runs a ₹1,30,000 purchase through the simulator, then explains the risk level, the cash effect and
+                    the goals it delays.
+                  </p>
+                </div>
               </Tile>
             </div>
           </div>

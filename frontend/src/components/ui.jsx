@@ -209,6 +209,32 @@ export function Reveal({ as: Tag = 'div', index = 0, className = '', children, .
   )
 }
 
+// A real product screenshot in a light browser frame. Images live in public/screens (captured
+// from the seeded demo account at 1440x900, exported at 1600x1000).
+export function ScreenFrame({ src, alt, label, eager = false, className = '' }) {
+  return (
+    <figure className={`rounded-2xl bg-ink/[0.03] p-1.5 ring-1 ring-line ${className}`}>
+      <div className="overflow-hidden rounded-xl border border-line bg-white shadow-[0_30px_60px_-30px_rgba(31,30,28,0.28)]">
+        <div className="flex items-center gap-1.5 border-b border-line px-3.5 py-2.5" aria-hidden>
+          <span className="size-2 rounded-full bg-slate-100 ring-1 ring-line" />
+          <span className="size-2 rounded-full bg-slate-100 ring-1 ring-line" />
+          <span className="size-2 rounded-full bg-slate-100 ring-1 ring-line" />
+          {label && <span className="ml-2.5 truncate font-mono text-[10.5px] text-ink-3">{label}</span>}
+        </div>
+        <img
+          src={src}
+          alt={alt}
+          width={1600}
+          height={1000}
+          loading={eager ? 'eager' : 'lazy'}
+          decoding="async"
+          className="block h-auto w-full"
+        />
+      </div>
+    </figure>
+  )
+}
+
 export function ErrorState({ error, onRetry }) {
   return (
     <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800" role="alert">

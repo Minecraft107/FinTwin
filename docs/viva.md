@@ -87,7 +87,7 @@ It is a **month-by-month cash-flow projection**, run twice: once without the cha
 4. Compare the two futures at 12 months: cash, net worth, surplus, health score (computed with the same scoring code), and goal dates.
 5. Assign a risk level by rule (any shortfall → CRITICAL, …), and list every assumption.
 
-Live demo: dashboard **Quick what-if** with ₹1,30,000, then ₹4,00,000. The first is LOW risk; the second is CRITICAL, with the month the money runs out.
+Live demo: dashboard **Quick what-if** with ₹1,30,000, then ₹4,00,000. The first comes out LOW or MEDIUM (the demo data is regenerated relative to the seeding date, so cash may briefly dip below one month of outgoings); the second is CRITICAL, with the month the money runs out. Check both before presenting.
 
 ### 9. Why is simulation deterministic rather than LLM-generated?
 - **Correctness:** LLMs are poor at multi-step arithmetic and can produce plausible but wrong numbers. A financial decision tool can't do that.

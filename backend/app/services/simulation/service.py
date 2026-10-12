@@ -138,6 +138,7 @@ def _delta(a: float | None, b: float | None) -> float | None:
 
 
 PACE_MONTHS = 3  # recent projected months used to extrapolate goals beyond the horizon
+MAX_EXTRAPOLATION_MONTHS = 120  # beyond 10 years past the horizon: "not reached at this pace"
 
 
 def _completion(proj: Projection, goal: GoalState) -> tuple[str | None, bool]:
@@ -154,7 +155,10 @@ def _completion(proj: Projection, goal: GoalState) -> tuple[str | None, bool]:
     if pace <= 0:
         return None, False
     remaining = goal.target - months[-1].goal_balances[goal.id]
-    return str(pd.Period(months[-1].month, "M") + math.ceil(remaining / pace)), True
+    needed = math.ceil(remaining / pace)
+    if needed > MAX_EXTRAPOLATION_MONTHS:  # a near-zero pace would "estimate" centuries ahead
+        return None, False
+    return str(pd.Period(months[-1].month, "M") + needed), True
 
 
 def _month_gap(a: str, b: str) -> int:

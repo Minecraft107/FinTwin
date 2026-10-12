@@ -189,3 +189,18 @@ def test_helpers():
 def test_invalid_changes_rejected(change):
     with pytest.raises(ValueError):
         Scenario.model_validate({"changes": [change]})
+
+
+def test_goal_completion_is_not_extrapolated_centuries_ahead():
+    from types import SimpleNamespace as NS
+
+    from app.services.simulation.service import MAX_EXTRAPOLATION_MONTHS, _completion
+
+    def proj(pace):  # 6 projected months, goal balance growing by `pace` a month
+        return NS(months=[NS(month=f"2027-{m:02d}", goal_balances={1: 1000 + pace * m})
+                          for m in range(1, 7)])  # fmt: skip
+
+    goal = NS(id=1, target=100_000, completed=None)
+    assert _completion(proj(5_000), goal) == ("2028-08", True)  # 69,000 left at 5,000/month
+    assert _completion(proj(1), goal) == (None, False)  # ~99,000 months: not reached
+    assert MAX_EXTRAPOLATION_MONTHS == 120

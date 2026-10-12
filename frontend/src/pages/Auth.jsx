@@ -1,32 +1,57 @@
 import { ArrowLeft } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
-import { Button, Field, Input } from '../components/ui'
+import { Button, Field, Input, ScreenFrame } from '../components/ui'
 import { useAuth } from '../context/AuthContext'
 import { errorText } from '../services/api'
 
 function AuthLayout({ title, subtitle, children, footer }) {
   return (
-    <div className="relative grid min-h-[100dvh] place-items-center px-4 py-16">
-      <Link
-        to="/"
-        className="group absolute top-5 left-4 inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-ink-2 transition duration-200 hover:bg-white hover:text-ink sm:top-6 sm:left-6"
-      >
-        <ArrowLeft className="size-4 transition duration-200 group-hover:-translate-x-0.5" strokeWidth={1.75} aria-hidden />
-        Back to home
-      </Link>
-      <div className="w-full max-w-sm">
-        <Link to="/" className="mb-6 flex items-center justify-center gap-2">
-          <div className="grid size-9 place-items-center rounded-md bg-ink font-serif text-xl leading-none text-white">F</div>
-          <span className="text-lg font-medium tracking-tight">FinTwin</span>
+    <div className="grid min-h-[100dvh] lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
+      <div className="relative grid place-items-center px-4 py-16">
+        <Link
+          to="/"
+          className="group absolute top-5 left-4 inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-ink-2 transition duration-200 hover:bg-white hover:text-ink sm:top-6 sm:left-6"
+        >
+          <ArrowLeft className="size-4 transition duration-200 group-hover:-translate-x-0.5" strokeWidth={1.75} aria-hidden />
+          Back to home
         </Link>
-        <div className="rounded-xl border border-line bg-white p-7">
-          <h1 className="font-serif text-[1.75rem] leading-tight tracking-[-0.02em] text-ink">{title}</h1>
-          <p className="mt-1 text-sm text-ink-2">{subtitle}</p>
-          <div className="mt-5">{children}</div>
+        <div className="w-full max-w-sm">
+          <Link to="/" className="mb-6 flex items-center justify-center gap-2">
+            <div className="grid size-9 place-items-center rounded-md bg-ink font-serif text-xl leading-none text-white">F</div>
+            <span className="text-lg font-medium tracking-tight">FinTwin</span>
+          </Link>
+          <div className="rounded-xl border border-line bg-white p-7">
+            <h1 className="font-serif text-[1.75rem] leading-tight tracking-[-0.02em] text-ink">{title}</h1>
+            <p className="mt-1 text-sm text-ink-2">{subtitle}</p>
+            <div className="mt-5">{children}</div>
+          </div>
+          <p className="mt-4 text-center text-sm text-ink-2">{footer}</p>
         </div>
-        <p className="mt-4 text-center text-sm text-ink-2">{footer}</p>
       </div>
+      <aside
+        className="relative hidden overflow-hidden border-l border-line bg-surface lg:flex lg:flex-col lg:justify-center lg:py-16 lg:pl-14"
+        aria-label="About FinTwin"
+      >
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0"
+          style={{ background: 'radial-gradient(70% 60% at 30% 20%, rgba(52,101,56,0.08), transparent 70%)' }}
+        />
+        <div className="relative max-w-md pr-14">
+          <p className="font-mono text-xs text-ink-3">Your financial digital twin</p>
+          <p className="mt-3 font-serif text-3xl leading-[1.15] tracking-[-0.02em] text-ink">
+            Score your financial health, forecast your spending and test a decision before you make it.
+          </p>
+        </div>
+        <ScreenFrame
+          eager
+          src="/screens/twin.webp"
+          label="fintwin · digital twin"
+          alt="The Digital Twin page of the demo account, showing income, expenses, savings, investments, debt, emergency fund, goals and net worth."
+          className="relative mt-10 -mr-24 w-[125%] max-w-none"
+        />
+      </aside>
     </div>
   )
 }

@@ -141,7 +141,10 @@ def test_what_if_accepts_single_change_body(demo):
     data = res.get_json()["data"]
     assert res.status_code == 200
     assert data["scenario"]["changes"][0]["type"] == "large_purchase"
-    assert data["impact"]["cash_change"] == -130_000
+    # The demo data is dated today, so how the cost splits between cash and goal savings varies
+    # (goals pause when cash nears its one-month buffer); the total effect never does.
+    assert data["impact"]["net_worth_change"] == pytest.approx(-130_000)
+    assert -130_000 <= data["impact"]["cash_change"] < 0
     assert data["risk_level"] in ("LOW", "MEDIUM")
 
 
@@ -164,13 +167,15 @@ def test_saved_scenario_lifecycle(demo):
     created = demo.post("/api/simulation/scenarios", json=body)
     assert created.status_code == 201
     sid = created.get_json()["data"]["scenario"]["id"]
-    assert created.get_json()["data"]["scenario"]["latest_result"]["cash_change_12m"] == -130_000
+    same = demo.post("/api/simulation/what-if", json={"changes": body["changes"]}).get_json()
+    saved = created.get_json()["data"]["scenario"]["latest_result"]["cash_change_12m"]
+    assert saved == pytest.approx(same["data"]["impact"]["cash_change"])
 
     listed = demo.get("/api/simulation/scenarios").get_json()["data"]
     assert [s["name"] for s in listed] == ["New laptop"]
 
     detail = demo.get(f"/api/simulation/scenarios/{sid}").get_json()["data"]
-    assert detail["result"]["impact"]["cash_change"] == -130_000
+    assert detail["result"]["impact"]["net_worth_change"] == pytest.approx(-130_000)
     assert len(detail["result"]["timeline"]) == 24
 
     assert demo.post(f"/api/simulation/scenarios/{sid}/run").status_code == 201
